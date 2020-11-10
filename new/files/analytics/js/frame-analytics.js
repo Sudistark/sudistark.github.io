@@ -1,1 +1,1 @@
-alert(1);
+window.top.alert(document.domain);
