@@ -1,1 +1,63 @@
-    <?xml version="1.0" encoding="UTF-8"?> <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd"><channel><title>The Facebook podcast</title><link>https://thefacebook.com/podcast</link><description>Everyday life of a facebook engineer</description>> <language>en</language><itunes:image href="https://thefacebook.com/podcast/image.png"/><itunes:explicit>true</itunes:explicit><itunes:owner><itunes:email>hexa@thefacebook.com</itunes:email></itunes:owner><item><title>A Legend Is Born</title><description>How to code 10x faster with 10x more bugs</description><enclosure url="https://thefacebook.com/podcast/episode1.mp3" length="12345" type="audio/mpeg"/><itunes:image href="https://thefacebook.com/podcast/episode1.png" /><pubDate>Fri, 06 Apr 1984 00:00:01 GMT</pubDate><guid>684CFFCD-CFA0-FACE-B00C-2F5473246A72</guid><itunes:explicit>true</itunes:explicit><itunes:duration>13:37</itunes:duration></item>> </channel></rss>
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" xml:lang="en" version="2.0">
+<channel>
+<title>
+<![CDATA[ test" Podcast ]]>
+</title>
+<link>https://rss.com/podcasts/rohitcodertesting</link>
+<atom:link href="https://media.rss.com/rohitcodertesting/feed.xml" rel="self" type="application/rss+xml"/>
+<description>
+<![CDATA[ mypodacast here ]]>
+</description>
+<generator>RSS.com v1.4.4</generator>
+<lastBuildDate>Sun, 17 Oct 2021 03:29:57 GMT</lastBuildDate>
+<language>en</language>
+<copyright>
+<![CDATA[ Rahul ]]>
+</copyright>
+<itunes:image href="https://assets.rss.com/images/no-cover-1400.jpg"/>
+<image>
+<url>https://assets.rss.com/images/no-cover-1400.jpg</url>
+<title>Rohit Podcast</title>
+<link>https://rss.com/podcasts/rohitcodertesting</link>
+</image>
+<itunes:summary>
+<![CDATA[ mypodacast here ]]>
+</itunes:summary>
+<podcast:locked owner="amrahulmail@gmail.com">Yes</podcast:locked>
+<itunes:author>Rohit</itunes:author>
+<itunes:owner>
+<itunes:name>Rohit</itunes:name>
+<itunes:email>amrahulmail@gmail.com</itunes:email>
+</itunes:owner>
+<itunes:explicit>no</itunes:explicit>
+<itunes:type>episodic</itunes:type>
+<itunes:category text="Education">
+<itunes:category text="Language Learning"/>
+</itunes:category>
+<itunes:category text="Education">
+<itunes:category text="Self-Improvement"/>
+</itunes:category>
+<item>
+<title>
+<![CDATA[ Testing episode ]]>
+</title>
+<itunes:title>
+<![CDATA[ Testing episode ]]>
+</itunes:title>
+<itunes:summary>hey there</itunes:summary>
+<description>
+<![CDATA[ <p>hey there</p> ]]>
+</description>
+<link>https://rss.com/podcasts/rohitcodertesting/298100</link>
+<enclosure url="https://media.rss.com/rohitcodertesting/20211017_032945_4bcf05e1fea6c6f25110f62ef505748b.mp3" length="2634846" type="audio/mpeg"/>
+<guid isPermaLink="false">e53977b0-2d3a-e2d4-309e-f6708229f579</guid>
+<itunes:image href="https://assets.rss.com/images/no-cover-1400.jpg"/>
+<itunes:duration>183</itunes:duration>
+<itunes:episodeType>full</itunes:episodeType>
+<itunes:episode>1</itunes:episode>
+<itunes:season>1</itunes:season>
+<itunes:explicit>no</itunes:explicit>
+<pubDate>Sun, 17 Oct 2021 03:29:57 GMT</pubDate>
+</item>
+</channel>
+</rss>
