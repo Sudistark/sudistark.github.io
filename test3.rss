@@ -1,0 +1,63 @@
+<rss xmlns:podcast="https://podcastindex.org/namespace/1.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:atom="http://www.w3.org/2005/Atom" xml:lang="en" version="2.0">
+<channel>
+<title>
+<![CDATA[ test" Podcast ]]>
+</title>
+<link>https://rss.com/podcasts/rohitcodertesting</link>
+<atom:link href="https://media.rss.com/rohitcodertesting/feed.xml" rel="self" type="application/rss+xml"/>
+<description>
+<![CDATA[ mypodacast here ]]>
+</description>
+<generator>RSS.com v1.4.4</generator>
+<lastBuildDate>Sun, 17 Oct 2021 03:29:57 GMT</lastBuildDate>
+<language>en</language>
+<copyright>
+<![CDATA[ Rahul ]]>
+</copyright>
+<itunes:image href='https://en2celr7rewbul.m.pipedream.net/test.jpg?x="xxxx'/>
+<image>
+<url>https://assets.rss.com/images/no-cover-1400.jpg</url>
+<title>Rohit Podcast</title>
+<link>https://rss.com/podcasts/rohitcodertesting</link>
+</image>
+<itunes:summary>
+<![CDATA[ mypodacast here ]]>
+</itunes:summary>
+<podcast:locked owner="sudi705raj@gmail.com">Yes</podcast:locked>
+<itunes:author>Rohit</itunes:author>
+<itunes:owner>
+<itunes:name>Rohit</itunes:name>
+<itunes:email>sudi705raj@gmail.com</itunes:email>
+</itunes:owner>
+<itunes:explicit>no</itunes:explicit>
+<itunes:type>episodic</itunes:type>
+<itunes:category text="Education">
+<itunes:category text="Language Learning"/>
+</itunes:category>
+<itunes:category text="Education">
+<itunes:category text="Self-Improvement"/>
+</itunes:category>
+<item>
+<title>
+<![CDATA[ Testing episode ]]>
+</title>
+<itunes:title>
+<![CDATA[ Testing episode ]]>
+</itunes:title>
+<itunes:summary>hey there</itunes:summary>
+<description>
+<![CDATA[ <p>hey there</p> ]]>
+</description>
+<link>https://rss.com/podcasts/rohitcodertesting/298100</link>
+<enclosure url="https://media.rss.com/rohitcodertesting/20211017_032945_4bcf05e1fea6c6f25110f62ef505748b.mp3" length="2634846" type="audio/mpeg"/>
+<guid isPermaLink="false">e53977b0-2d3a-e2d4-309e-f6708229f579</guid>
+<itunes:image href="https://assets.rss.com/images/no-cover-1400.jpg"/>
+<itunes:duration>183</itunes:duration>
+<itunes:episodeType>full</itunes:episodeType>
+<itunes:episode>1</itunes:episode>
+<itunes:season>1</itunes:season>
+<itunes:explicit>no</itunes:explicit>
+<pubDate>Sun, 17 Oct 2021 03:29:57 GMT</pubDate>
+</item>
+</channel>
+</rss>
