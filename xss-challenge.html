@@ -1,0 +1,14 @@
+<p id="xss">Try to popup an alert</p>
+
+<script>
+
+    // Taking input from src parameter
+
+    src = new URLSearchParams(window.location.search).get('src');
+
+    // Removing " to avoid xss 
+
+    imgSrc = src.replace(/"/g, '')
+
+    xss.innerHTML = '<img src="{}">'.replace('{}',imgSrc)
+</script>
