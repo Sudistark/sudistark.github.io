@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>DOMPurify Test</title>
+  <style>
+    #container {
+      display: flex;
+    }
+    #dom-view, #render-view {
+      width: 50%;
+      height: 100vh;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="dom-view">
+      <h2>DOM View</h2>
+      <pre id="dom-output"></pre>
+    </div>
+    <div id="render-view">
+      <h2>Rendered View</h2>
+      <div id="render-output"></div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.4/purify.js"></script>
+  <script>
+    function sanitizeAndRender(html) {
+      const sanitizedHTML = DOMPurify.sanitize(html, {
+        ADD_TAGS: ['iframe']
+      });
+
+      document.getElementById('dom-output').textContent = sanitizedHTML;
+      document.getElementById('render-output').innerHTML = sanitizedHTML;
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const htmlParam = urlParams.get('html');
+    if (htmlParam) {
+      sanitizeAndRender(htmlParam);
+    }
+  </script>
+</body>
+</html
