@@ -1,0 +1,17 @@
+<svg width="1200" height="628" viewBox="0 0 1200 628" fill="none" xmlns="http://www.w3.org/2000/svg"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    {% for fl in flag -%}
+    <pattern id="pattern{{flag}}" patternContentUnits="objectBoundingBox" width="1" height="1">
+      <use xlink:href="#image{{flag}}" transform="scale(0.00159744)" />
+    </pattern>
+    <image id="image{{flag}}" width="626" height="626" xlink:href="{{ flag }}" />
+    {%- endfor %}
+    <clipPath id="clip0_8_48">
+      <rect width="1200" height="628" fill="white" />
+    </clipPath>
+    <clipPath id="clip1_8_48">
+      <rect width="257" height="51" fill="white" transform="translate(38 46)" />
+    </clipPath>
+  </defs>
+</svg>
