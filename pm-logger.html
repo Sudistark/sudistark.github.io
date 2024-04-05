@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PostMessage Event Listener</title>
+</head>
+<body>
+
+<script>
+// Function to handle postMessage events
+function handleMessage(event) {
+  // Display the full data in the console
+  console.log("Received message:", event.data);
+}
+
+// Adding event listener for 'message' event
+window.addEventListener('message', handleMessage);
+</script>
+
+</body>
+</html>
