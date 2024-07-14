@@ -1,1 +1,1 @@
-console.log("shirley: XSS on ", document.domain)
+console.dir("XSS in " + origin)
