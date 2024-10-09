@@ -1,0 +1,422 @@
+
+<!doctype html><script src="//archive.org/includes/athena.js" type="text/javascript"></script>
+<script type="text/javascript">window.addEventListener('DOMContentLoaded',function(){var v=archive_analytics.values;v.service='wb';v.server_name='wwwb-app213.us.archive.org';v.server_ms=263;archive_analytics.send_pageview({});});</script>
+<script type="text/javascript" src="https://web-static.archive.org/_static/js/bundle-playback.js?v=HxkREWBo" charset="utf-8"></script>
+<script type="text/javascript" src="https://web-static.archive.org/_static/js/wombat.js?v=txqj7nKC" charset="utf-8"></script>
+<script>window.RufflePlayer=window.RufflePlayer||{};window.RufflePlayer.config={"autoplay":"on","unmuteOverlay":"hidden"};</script>
+<script type="text/javascript" src="https://web-static.archive.org/_static/js/ruffle/ruffle.js"></script>
+<script type="text/javascript">
+    __wm.init("https://web.archive.org/web");
+  __wm.wombat("https://cdn.sekurak.pl/copy-paste/playground.html","20230225011726","https://web.archive.org/","web","https://web-static.archive.org/_static/",
+	      "1677287846");
+</script>
+<link rel="stylesheet" type="text/css" href="https://web-static.archive.org/_static/css/banner-styles.css?v=S1zqJCYt" />
+<link rel="stylesheet" type="text/css" href="https://web-static.archive.org/_static/css/iconochive.css?v=qtvMKcIJ" />
+<!-- End Wayback Rewrite JS Include -->
+<meta charset="utf-8">
+<title>Copy &amp; Paste playground</title>
+<!-- the DOM tree viewer is inspired by 
+     Live DOM Viewer at 
+     https://software.hixie.ch/utilities/js/live-dom-viewer/ 
+
+-->
+<!-- CSS style inspired by @RenateUSB: https://jsfiddle.net/1fynun7a/1591/ -->
+<style>
+    
+    .hidden {
+        display:none;
+    }
+    
+    h1, h2, h3 {
+        margin: 0;
+    }
+    
+    p.tree,
+    ul.tree,
+    ul.tree ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      font-family: monospace;
+      word-break: break-all;
+    }
+
+    ul.tree ul {
+      margin-left: 1.0em;
+    }
+
+    ul.tree li {
+      margin-left: 0.35em;
+      border-left: thin solid #000;
+    }
+
+    ul.tree li:before {
+      width: 0.9em;
+      height: 0.6em;
+      margin-right: 0.1em;
+      vertical-align: top;
+      border-bottom: thin solid #000;
+      content: "";
+      display: inline-block;
+    }
+
+    ul.tree :last-child {
+      border-left: none;
+    }
+    ul.tree :last-child:before {
+      border-left: thin solid #000;
+    }
+    
+    li {
+        color: #888;
+    }
+    .tag-name {
+        color: purple;
+    }
+    .attr-name {
+        color: darkgoldenrod;
+    }
+    .attr-value {
+        color: blue;
+    }
+    .text-node {
+        color: black;
+    }
+    .comment-node {
+        color: green;
+    }
+    
+    textarea, .editable {
+        border: inset;
+        height: 80px;
+        resize: none;
+        overflow: auto;
+        padding: 3px;
+    }
+    
+    * {
+        font-family:  monospace;
+    }
+        
+    #grid {
+        display: grid;
+        margin: 5px;
+        grid-template-columns: 1fr 1fr;
+        grid-column-gap: 2%;
+        grid-template-rows: auto;
+        grid-template-areas: 
+          "header1 header2"
+          "data1 data2 "
+          "button button2"
+          "dom1 dom2";
+    }
+    body {
+        max-width: 98%;
+        margin: auto;
+    }
+    
+</style>
+
+<body><!-- BEGIN WAYBACK TOOLBAR INSERT -->
+<script>__wm.rw(0);</script>
+<div id="wm-ipp-base" lang="en" style="display:none;direction:ltr;">
+<div id="wm-ipp" style="position:fixed;left:0;top:0;right:0;">
+<div id="donato" style="position:relative;width:100%;">
+  <div id="donato-base">
+    <iframe id="donato-if" src="https://archive.org/includes/donate.php?as_page=1&amp;platform=wb&amp;referer=https%3A//web.archive.org/web/20230225011726/https%3A//cdn.sekurak.pl/copy-paste/playground.html"
+	    scrolling="no" frameborder="0" style="width:100%; height:100%">
+    </iframe>
+  </div>
+</div><div id="wm-ipp-inside">
+  <div id="wm-toolbar" style="position:relative;display:flex;flex-flow:row nowrap;justify-content:space-between;">
+    <div id="wm-logo" style="/*width:110px;*/padding-top:12px;">
+      <a href="/web/" title="Wayback Machine home page"><img src="https://web-static.archive.org/_static/images/toolbar/wayback-toolbar-logo-200.png" srcset="https://web-static.archive.org/_static/images/toolbar/wayback-toolbar-logo-100.png, https://web-static.archive.org/_static/images/toolbar/wayback-toolbar-logo-150.png 1.5x, https://web-static.archive.org/_static/images/toolbar/wayback-toolbar-logo-200.png 2x" alt="Wayback Machine" style="width:100px" border="0" /></a>
+    </div>
+    <div class="c" style="display:flex;flex-flow:column nowrap;justify-content:space-between;flex:1;">
+      <form class="u" style="display:flex;flex-direction:row;flex-wrap:nowrap;" target="_top" method="get" action="/web/submit" name="wmtb" id="wmtb"><input type="text" name="url" id="wmtbURL" value="https://cdn.sekurak.pl/copy-paste/playground.html" onfocus="this.focus();this.select();" style="flex:1;"/><input type="hidden" name="type" value="replay" /><input type="hidden" name="date" value="20230225011726" /><input type="submit" value="Go" />
+      </form>
+      <div style="display:flex;flex-flow:row nowrap;align-items:flex-end;">
+                <div class="s" id="wm-nav-captures" style="flex:1;">
+                    <a class="t" href="/web/20230225011726*/https://cdn.sekurak.pl/copy-paste/playground.html" title="See a list of every capture for this URL">6 captures</a>
+          <div class="r" title="Timespan for captures of this URL">17 Sep 2020 - 24 Aug 2023</div>
+          </div>
+        <div class="k">
+          <a href="" id="wm-graph-anchor">
+            <div id="wm-ipp-sparkline" title="Explore captures for this URL" style="position: relative">
+              <canvas id="wm-sparkline-canvas" width="725" height="27" border="0"></canvas>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="n">
+      <table>
+        <tbody>
+          <!-- NEXT/PREV MONTH NAV AND MONTH INDICATOR -->
+          <tr class="m">
+            <td class="b" nowrap="nowrap"><a href="https://web.archive.org/web/20220807225145/https://cdn.sekurak.pl/copy-paste/playground.html" title="07 Aug 2022"><strong>Aug</strong></a></td>
+            <td class="c" id="displayMonthEl" title="You are here: 01:17:26 Feb 25, 2023">FEB</td>
+            <td class="f" nowrap="nowrap"><a href="https://web.archive.org/web/20230824073820/https://cdn.sekurak.pl/copy-paste/playground.html" title="24 Aug 2023"><strong>Aug</strong></a></td>
+          </tr>
+          <!-- NEXT/PREV CAPTURE NAV AND DAY OF MONTH INDICATOR -->
+          <tr class="d">
+            <td class="b" nowrap="nowrap"><a href="https://web.archive.org/web/20220807225145/https://cdn.sekurak.pl/copy-paste/playground.html" title="22:51:45 Aug 07, 2022"><img src="https://web-static.archive.org/_static/images/toolbar/wm_tb_prv_on.png" alt="Previous capture" width="14" height="16" border="0" /></a></td>
+            <td class="c" id="displayDayEl" style="width:34px;font-size:22px;white-space:nowrap;" title="You are here: 01:17:26 Feb 25, 2023">25</td>
+            <td class="f" nowrap="nowrap"><a href="https://web.archive.org/web/20230824073820/https://cdn.sekurak.pl/copy-paste/playground.html" title="07:38:20 Aug 24, 2023"><img src="https://web-static.archive.org/_static/images/toolbar/wm_tb_nxt_on.png" alt="Next capture" width="14" height="16" border="0" /></a></td>
+          </tr>
+          <!-- NEXT/PREV YEAR NAV AND YEAR INDICATOR -->
+          <tr class="y">
+            <td class="b" nowrap="nowrap"><a href="https://web.archive.org/web/20200928190212/https://cdn.sekurak.pl/copy-paste/playground.html" title="28 Sep 2020"><strong>2020</strong></a></td>
+            <td class="c" id="displayYearEl" title="You are here: 01:17:26 Feb 25, 2023">2023</td>
+            <td class="f" nowrap="nowrap">2024</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="r" style="display:flex;flex-flow:column nowrap;align-items:flex-end;justify-content:space-between;">
+      <div id="wm-btns" style="text-align:right;height:23px;">
+                <span class="xxs">
+          <div id="wm-save-snapshot-success">success</div>
+          <div id="wm-save-snapshot-fail">fail</div>
+          <a id="wm-save-snapshot-open" href="#" title="Share via My Web Archive" >
+            <span class="iconochive-web"></span>
+          </a>
+          <a href="https://archive.org/account/login.php" title="Sign In" id="wm-sign-in">
+            <span class="iconochive-person"></span>
+          </a>
+          <span id="wm-save-snapshot-in-progress" class="iconochive-web"></span>
+        </span>
+                <a class="xxs" href="http://faq.web.archive.org/" title="Get some help using the Wayback Machine" style="top:-6px;"><span class="iconochive-question" style="color:rgb(87,186,244);font-size:160%;"></span></a>
+        <a id="wm-tb-close" href="#close" style="top:-2px;" title="Close the toolbar"><span class="iconochive-remove-circle" style="color:#888888;font-size:240%;"></span></a>
+      </div>
+      <div id="wm-share" class="xxs">
+        <a href="/web/20230225011726/http://web.archive.org/screenshot/https://cdn.sekurak.pl/copy-paste/playground.html"
+           id="wm-screenshot"
+           title="screenshot">
+          <span class="wm-icon-screen-shot"></span>
+        </a>
+        <a href="#" id="wm-video" title="video">
+          <span class="iconochive-movies"></span>
+        </a>
+        <a id="wm-share-facebook" href="#" data-url="https://web.archive.org/web/20230225011726/https://cdn.sekurak.pl/copy-paste/playground.html" title="Share on Facebook" style="margin-right:5px;" target="_blank"><span class="iconochive-facebook" style="color:#3b5998;font-size:160%;"></span></a>
+        <a id="wm-share-twitter" href="#" data-url="https://web.archive.org/web/20230225011726/https://cdn.sekurak.pl/copy-paste/playground.html" title="Share on Twitter" style="margin-right:5px;" target="_blank"><span class="iconochive-twitter" style="color:#1dcaff;font-size:160%;"></span></a>
+      </div>
+      <div style="padding-right:2px;text-align:right;white-space:nowrap;">
+        <a id="wm-expand" class="wm-btn wm-closed" href="#expand"><span id="wm-expand-icon" class="iconochive-down-solid"></span> <span class="xxs" style="font-size:80%;">About this capture</span></a>
+      </div>
+    </div>
+  </div>
+    <div id="wm-capinfo" style="border-top:1px solid #777;display:none; overflow: hidden">
+        <div id="wm-capinfo-notice" source="api"></div>
+                <div id="wm-capinfo-collected-by">
+    <div style="background-color:#666;color:#fff;font-weight:bold;text-align:center">COLLECTED BY</div>
+    <div style="padding:3px;position:relative" id="wm-collected-by-content">
+      <div style="display:inline-block;vertical-align:top;width:49%;">
+			<span class="c-logo" style="background-image:url(https://archive.org/services/img/save-page-now-outlinks)"></span>
+		<div>Collection: <a style="color:#33f;" href="https://archive.org/details/save-page-now-outlinks" target="_new"><span class="wm-title">Save Page Now Outlinks</span></a></div>
+	      </div>
+    </div>
+    </div>
+    <div id="wm-capinfo-timestamps">
+    <div style="background-color:#666;color:#fff;font-weight:bold;text-align:center" title="Timestamps for the elements of this page">TIMESTAMPS</div>
+    <div>
+      <div id="wm-capresources" style="margin:0 5px 5px 5px;max-height:250px;overflow-y:scroll !important"></div>
+      <div id="wm-capresources-loading" style="text-align:left;margin:0 20px 5px 5px;display:none"><img src="https://web-static.archive.org/_static/images/loading.gif" alt="loading" /></div>
+    </div>
+    </div>
+  </div></div></div></div><div id="wm-ipp-print">The Wayback Machine - https://web.archive.org/web/20230225011726/https://cdn.sekurak.pl/copy-paste/playground.html</div>
+<script type="text/javascript">//<![CDATA[
+__wm.bt(725,27,25,2,"web","https://cdn.sekurak.pl/copy-paste/playground.html","20230225011726",1996,"https://web-static.archive.org/_static/",["https://web-static.archive.org/_static/css/banner-styles.css?v=S1zqJCYt","https://web-static.archive.org/_static/css/iconochive.css?v=qtvMKcIJ"], false);
+  __wm.rw(1);
+//]]></script>
+<!-- END WAYBACK TOOLBAR INSERT -->
+ 
+<h1 style="text-align:center">Secur<span style="color:red">it</span>um Copy &amp; Paste playground</h1>
+<p style="display:none">Welcome to the Copy &amp; Paste playground. In this playground, you can play around with copy/paste behaviour in browsers. You can copy arbitrary HTML to the clipboard, and see how any HTML pasted from clipboard get parsed by browser.</p>
+<div id="grid">
+<h2 style="grid-area:header1">HTML Input</h2>
+<textarea style="grid-area:data1" placeholder="Enter some HTML here" id="input">
+</textarea>
+<button draggable="true" ondragstart="
+    //event.preventDefault();
+    event.dataTransfer.setData('text/html', input.value);
+    //location.href='file:///Users/mb///research/copy-paste/playground.html';
+    
+" onclick="copyButtonClicked=true;document.execCommand('copy')" style="grid-area:button">Copy as HTML</button>
+<div style="grid-area:dom1">
+<h3>DOM tree</h3>
+<span id="inputDom"></span>
+</div>
+<h2 style="grid-area:header2">Paste target (Rich editor)</h2>
+<div style="grid-area:data2" class="editable" id="editable" contenteditable></div>
+<button style="grid-area:button2" onclick="editable.textContent='';updateOutputDomTree()">Clear</button>
+<div style="grid-area:dom2">
+    <h3>DOM tree</h3>
+<span id="outputDom"></span> 
+</div>
+</div>
+
+
+<script>
+    const template = document.createElement('template');
+    const inputTextarea = document.querySelector('#input');
+    const inputDomElement = document.querySelector('#inputDom');
+    const outputDomElement = document.querySelector('#outputDom');
+    const editableDomElement = document.querySelector('#editable');
+    let copyButtonClicked = false;
+    
+    inputTextarea.oninput = ev => {
+        const input = '<body>' + ev.target.value;
+        template.innerHTML = input;
+        
+        inputDomElement.textContent = '';
+        const mainTree = createMainTree(template.content.childNodes)
+        inputDomElement.appendChild(mainTree);
+        
+    }
+    
+    function updateOutputDomTree() {        
+        outputDomElement.textContent = '';
+        const mainTree = createMainTree(editableDomElement.childNodes);
+        outputDomElement.appendChild(mainTree);
+        
+    }
+    
+    document.querySelector('#editable').oninput = updateOutputDomTree;
+    
+    document.addEventListener('copy', ev => {
+        const clicked = copyButtonClicked;
+        copyButtonClicked = false;
+        
+        if (!clicked && ev.target !== inputTextarea) return;
+        
+        const val = inputTextarea.value;
+        ev.preventDefault();
+        ev.clipboardData.setData('text/html', val);
+        ev.clipboardData.setData('text/plain', val);
+    });
+    
+</script>
+    
+
+    
+<!-- Code for generating the view of the DOM tree -->
+<template id="element">
+    <li class="tag">&lt;<span class="tag-name"></span><span class="attributes"></span><span class="ending"></span>&gt;
+        <ul class="children"></ul>
+    </li>
+    
+</template>
+
+<template id="attribute">&#32;<span class="attr-name"></span>="<span class="attr-value"></span>"</template>
+
+<template id="node-list">
+    <ul class="list-root"></ul>
+</template>
+
+<template id="comment">
+    <li class="comment-node">#comment: <span class="comment-text"></span></li>
+</template>
+
+<template id="text">
+    <li>#text: "<span class="text-node"></span>"</li>
+</template>
+
+<script>
+    const elementTemplate = document.getElementById('element');
+    const attributeTemplate = document.getElementById('attribute');
+    function createElementNode(node) {
+        const template = document.importNode(elementTemplate.content, true);
+        
+        template.querySelector('.tag-name').textContent = node.tagName;
+        if (node.attributes.length > 0) {
+            const attributes = template.querySelector('.attributes');
+            for (let attr of node.attributes) {
+                const at = document.importNode(attributeTemplate.content, true);
+                at.querySelector('.attr-name').textContent = attr.name;
+                at.querySelector('.attr-value').textContent = attr.value;
+                attributes.appendChild(at);
+            }
+        }
+        const children = template.querySelector('.children');
+        if (node.hasChildNodes()) {
+            children.appendChild(createTreeForNodeList(node.childNodes));
+        } else {
+            children.remove();
+            template.querySelector('.ending').textContent = '/';
+        }
+        
+        return template;
+    }
+    
+    const textTemplate = document.getElementById('text');
+    function createTextNode(node) {
+        const template = document.importNode(textTemplate.content, true);
+        template.querySelector('.text-node').textContent = node.textContent;
+        
+        return template;
+    }
+    
+    const commentTemplate = document.getElementById('comment');
+    function createCommentNode(node) {
+        const template = document.importNode(commentTemplate.content, true);
+        template.querySelector('.comment-text').textContent = node.textContent;
+        
+        return template;
+    }
+    
+    const nodeListTemplate = document.getElementById('node-list');
+    function createTreeForNodeList(nodeList, isMainTree=false) {
+        const template = document.importNode(nodeListTemplate.content, true);
+        const listRoot = template.querySelector('.list-root');
+        if (isMainTree) {
+            listRoot.classList.add('tree');
+        }
+        
+        for (let child of nodeList) {
+            listRoot.appendChild(processNode(child));
+        }
+        
+        return template;
+    }
+    
+    const emptyTemplate = document.createElement('template');
+    function processNode(node) {
+        switch (node.nodeType) {
+        case Node.ELEMENT_NODE:
+            return createElementNode(node);
+        case Node.TEXT_NODE:
+            return createTextNode(node);
+        case Node.COMMENT_NODE:
+            return createCommentNode(node);
+        default:
+            return emptyTemplate.content;
+        }
+    }
+    
+    function createMainTree(node) {
+        return createTreeForNodeList(node, true);
+    }
+    
+</script>
+
+<!--
+     FILE ARCHIVED ON 01:17:26 Feb 25, 2023 AND RETRIEVED FROM THE
+     INTERNET ARCHIVE ON 08:22:04 Oct 09, 2024.
+     JAVASCRIPT APPENDED BY WAYBACK MACHINE, COPYRIGHT INTERNET ARCHIVE.
+
+     ALL OTHER CONTENT MAY ALSO BE PROTECTED BY COPYRIGHT (17 U.S.C.
+     SECTION 108(a)(3)).
+-->
+<!--
+playback timings (ms):
+  captures_list: 0.531
+  exclusion.robots: 0.027
+  exclusion.robots.policy: 0.017
+  esindex: 0.011
+  cdx.remote: 15.465
+  LoadShardBlock: 107.97 (3)
+  PetaboxLoader3.datanode: 94.187 (4)
+  load_resource: 116.913
+  PetaboxLoader3.resolve: 88.28
+-->
