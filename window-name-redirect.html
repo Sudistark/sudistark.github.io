@@ -1,0 +1,5 @@
+<script>
+  let params = new URLSearchParams(document.location.search);
+  window.name = params.get("name")
+  window.location.href = atob(location.hash.slice(1))
+</script>
