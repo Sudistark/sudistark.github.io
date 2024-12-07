@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <style>
+    #iframe-container {
+      position: relative;
+      width: 100%;
+      height: 500px;
+    }
+    iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+
+<div id="iframe-container">
+  <iframe src="file:///etc/passwd"></iframe>
+</div>
+
+<script>
+  const iframe = document.querySelector('iframe');
+
+  function toggleFullScreen() {
+    if (!document.fullscreenElement) {
+      iframe.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+
+  iframe.addEventListener('dblclick', toggleFullScreen);
+</script>
+
+</body>
+</html>

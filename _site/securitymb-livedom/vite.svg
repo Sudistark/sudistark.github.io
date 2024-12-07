@@ -1,0 +1,10 @@
+
+<svg xmlns="http://www.w3.org/2000/svg">
+  <text y="32" font-size="32">&#120069;entkowski</text>
+  <style>
+    text { fill: black }
+    @media (prefers-color-scheme: dark) {
+      path { fill: white }
+    }
+  </style>
+</svg>

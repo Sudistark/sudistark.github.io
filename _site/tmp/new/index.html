@@ -1,0 +1,16 @@
+<p>Hello Shirley</p>
+
+<?php
+header("Access-Control-Allow-Origin: shirley.com");
+header("X-Frame-Options: allow-from https://wacky.buggywebsite.com");
+?>
+
+<script> 
+  window.name = "iframe";
+  window.fileIntegrity =  {
+			'rfc' : ' https://w3c.github.io/webappsec-subresource-integrity/',
+			'algorithm' : 'sha256',
+			'value' : 'uZzMI6SuiNZmTzoOnV4Y9yqAjtSOgiIgyrKvumYRI6E=',
+			'creationtime' : 1602687229
+		}
+</script>

