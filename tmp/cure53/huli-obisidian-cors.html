@@ -1,0 +1,20 @@
+
+<html>
+  <body>
+      content of google.com:
+      <div id=result></div>
+      <script>
+      const xhr = new XMLHttpRequest();
+      xhr.onreadystatechange = function() {
+          if (xhr.readyState == 4) {
+             result.innerText = xhr.responseText;
+          }
+      };
+      xhr.onerror = function() {
+        result.innerText = 'Error, please check DevTools'
+      }
+      xhr.open("GET", "https://github@www.google.com");
+      xhr.send();
+    </script>
+  </body>
+</html>
