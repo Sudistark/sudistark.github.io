@@ -8,16 +8,17 @@ tag:
 
 
 
-I haven't done any CVE reverse engineer blogposts before but really wanted to do one, so I decided look at something this Advisory looked interesting and I already had some idea about it from a past blogpost from the original finder of the same bug 
-@SinSinology  the vulnerable component name is same so it would be just a bypass of the old bug
+I haven't done any CVE reverse engineer blogposts before but really wanted to do one, so I decided look at something this Advisory [https://www.zerodayinitiative.com/advisories/ZDI-24-1645/](https://www.zerodayinitiative.com/advisories/ZDI-24-1645/) looked interesting and I already had some idea about it from a past blogpost from the original finder of the same bug 
+@SinSinology,  the vulnerable component name is same so it would be just a bypass of the old bug
 
 Below you can find the original blogpost of the old bug, we have detailed blogpost and the poc too :
 
-https://summoning.team/blog/progress-whatsup-gold-writedatafile-cve-2024-4883-rce/
-https://github.com/sinsinology/CVE-2024-4883
+[https://summoning.team/blog/progress-whatsup-gold-writedatafile-cve-2024-4883-rce/](https://summoning.team/blog/progress-whatsup-gold-writedatafile-cve-2024-4883-rce/)
+
+[https://github.com/sinsinology/CVE-2024-4883](https://github.com/sinsinology/CVE-2024-4883)
 
 
-The details looks exactly the same I so quicly downloaded the patched version to do a patch diff https://www.zerodayinitiative.com/advisories/ZDI-24-1645/ . I already had an old version installed so I took a backup of the following two files
+The details looks exactly the same I so quicly downloaded the patched version to do a patch diff [https://www.zerodayinitiative.com/advisories/ZDI-24-1645/](https://www.zerodayinitiative.com/advisories/ZDI-24-1645/) . I already had an old version installed so I took a backup of the following two files
 
 ```
 C:\Program Files (x86)\Ipswitch\WhatsUp\NmAPI.exe
