@@ -1,6 +1,6 @@
 ---
 layout: post
-title: [CVE-2024-46909] Progress Software WhatsUp Gold WriteDataFile Directory Traversal Remote Code Execution Vulnerability 
+title: (CVE-2024-46909) Progress Software WhatsUp Gold WriteDataFile Directory Traversal Remote Code Execution Vulnerability 
 tag:
 - CVE
 - RCE
