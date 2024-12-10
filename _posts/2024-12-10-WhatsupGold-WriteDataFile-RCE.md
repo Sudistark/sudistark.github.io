@@ -100,3 +100,4 @@ Thus by visiting the uploaded .aspx file location we can execute arbitrary comma
 
 A small gif for the exploit in action:
 
+![518N76pbo5](https://gist.github.com/user-attachments/assets/aa9b7906-53d9-4e1a-b673-788d285816fd)
