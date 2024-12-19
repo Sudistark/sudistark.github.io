@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Stealing Github Access Token of any user using Vscode Discord Rich Presence extension | Your awesome title</title>
+<meta name="generator" content="Jekyll v4.3.4" />
+<meta property="og:title" content="Stealing Github Access Token of any user using Vscode Discord Rich Presence extension" />
+<meta name="author" content="GitHub User" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="My friends are always active on Discord and they tend use extensions which integerates with Dicord Rich Presence to have some cool status on their Discord profile." />
+<meta property="og:description" content="My friends are always active on Discord and they tend use extensions which integerates with Dicord Rich Presence to have some cool status on their Discord profile." />
+<link rel="canonical" href="http://localhost:4000/2023/04/23/Discord-Rich-Presence-LeonardSSH.vscord.html" />
+<meta property="og:url" content="http://localhost:4000/2023/04/23/Discord-Rich-Presence-LeonardSSH.vscord.html" />
+<meta property="og:site_name" content="Your awesome title" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2023-04-23T00:00:00+00:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Stealing Github Access Token of any user using Vscode Discord Rich Presence extension" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"GitHub User"},"dateModified":"2023-04-23T00:00:00+00:00","datePublished":"2023-04-23T00:00:00+00:00","description":"My friends are always active on Discord and they tend use extensions which integerates with Dicord Rich Presence to have some cool status on their Discord profile.","headline":"Stealing Github Access Token of any user using Vscode Discord Rich Presence extension","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2023/04/23/Discord-Rich-Presence-LeonardSSH.vscord.html"},"url":"http://localhost:4000/2023/04/23/Discord-Rich-Presence-LeonardSSH.vscord.html"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Your awesome title" />
+</head>
+<body><header class="site-header">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Your awesome title</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">Stealing Github Access Token of any user using Vscode Discord Rich Presence extension</h1>
+    <p class="post-meta"><time class="dt-published" datetime="2023-04-23T00:00:00+00:00" itemprop="datePublished">
+        Apr 23, 2023
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>My friends are always active on Discord and they tend use extensions which integerates with Dicord Rich Presence to have some cool status on their Discord profile.</p>
+
+<p>A common example would be this extension which are available for Vscode:</p>
+
+<p>https://marketplace.visualstudio.com/items?itemName=LeonardSSH.vscord ( 250,319 installs )
+https://marketplace.visualstudio.com/items?itemName=icrawl.discord-vscode ( 1,329,713 installs )</p>
+
+<p>From the number of installs you can see such extensions are really very popuplar. You can find similar extension for other applications also like Spotify,Valorant,Genshin Impact,etc</p>
+
+<p>To start using this extension you just need to install it in Vscode and make sure you are using Discord Desktop app,the communication b/w this extension and Discord app happens through  websocket.
+Once the extension is installed just start working on you repository.</p>
+
+<p>Here’s how it appears on the Discord UI (both vscode extension have the same view as you can see in this screenshot):
+<img src="https://user-images.githubusercontent.com/31372554/233820334-462e19c2-2660-4ef6-913d-d0f4e6376899.png" alt="image" /></p>
+
+<p>If you click on the <em>View Repository</em> button, this popup will appear:</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/233820391-ca93d949-364c-4956-aca7-cc492251634b.png" alt="image" /></p>
+
+<p>If you proceed to click on <em>Yep!</em>, it will open the repository url in your browser.</p>
+
+<hr />
+
+<p>From my understanding the <code class="language-plaintext highlighter-rouge">{git_url}</code> placeholder value is taken from the .git/config file</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[core]
+        repositoryformatversion = 0
+        filemode = false
+        bare = false
+        logallrefupdates = true
+        ignorecase = true
+[remote "origin"]
+        url = https://github.com/Sudistark/test-discord-vscode
+        fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+        remote = origin
+        merge = refs/heads/master
+</code></pre></div></div>
+
+<p>Whatever is in the url is used, passed to Discord and is viewable to other Discord users also upon clicking on the <em>View Repository</em> button.</p>
+
+<p>Most users would be signed in to their GitHub acc in vscode, so there is no requirement for a GitHub personal access token.</p>
+
+<p>But suppose you are not logged in so upon trying to clone a private repo or making commits would ask you for GitHub credentials</p>
+
+<p>A prompt like this appear:
+<img src="https://user-images.githubusercontent.com/31372554/233851141-99ae2082-2fdf-48a7-bd25-a5625d79beb7.png" alt="chrome_qxNwX7MrYQ" /></p>
+
+<p>username is your GitHub username and for password you need to use your GitHub personal access token.
+This username password will stored in .git/config file like this:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>[core]
+        repositoryformatversion = 0
+        filemode = false
+        bare = false
+        logallrefupdates = true
+        ignorecase = true
+[remote "origin"]
+        url = https://sudistark:ghp_xxxxxxxxxxxxxxx@github.com/Sudistark/test-discord-vscode
+        fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+        remote = origin
+        merge = refs/heads/master
+</code></pre></div></div>
+
+<p>Noticed the <code class="language-plaintext highlighter-rouge">@</code> part before github.com contains your credentials.</p>
+
+<p><img src="https://user-images.githubusercontent.com/31372554/233851285-6a946116-e23e-470b-895c-4979072199ba.png" alt="image" /></p>
+
+<hr />
+
+<p>The extension had no checks for git_url , even when the url contained the credentials it was pass as it is to Discord due to which any other Discord user would’ve have got the user’s GitHub personal access token by copying  the Repository url.</p>
+
+<p>Browsers hides the credentials part ,for example if you were to visit this url suppose in Google Chrome :</p>
+
+<p>https://sudistark:ghp_xxxxxxxx@github.com/sudistark/private-repo</p>
+
+<p>In the address bar it would have appear like this instead:
+https://github.com/sudistark/private-repo</p>
+
+<p>It was  visible like this only (the credentials part was hidden ) even in Discord when you clicked on the <em>View Repository</em> button.</p>
+
+<p>As the credentials part was hidden all along in Discord and even when you clicked on <em>View Repository</em> button, nobody would have been able to figured it out that there’s a bug which is exposing the user’s GitHub Personal access token to the public.</p>
+
+<p>Someone  would have been only able to identify this bug when he opens your discord profile, clicks on the <em>View Repository</em> button then again clicks on the <em>Yep</em> button confirming to open it in browser  and then copies the url from the browser address bar.</p>
+
+<hr />
+
+<p>I found this bug totally by mistake, I was just causally checking what my developer friend was doing, so I copied the repo url and pasted in our Discord chat and there I saw a GitHub token.</p>
+
+<p>I had no fucking idea from where that token came from, at first I had doubt that this token is mine but when I checked it with one of the api calls. I saw my friend’s username there in the response which confirmed that it was his token.</p>
+
+<p>In the past I have copied my friend’s repo url many times but never saw the GitHub token before so I asked him about it to identify the cause of this bug, he told me that he cloned the repo from his another acc using the GitHub token this time.</p>
+
+<p>After trying the same thing I was able to reproduce this behaviour.</p>
+
+<hr />
+
+<p>I quickly forwarded the details to the Project Maintainer , which were very swift in responding and addressing the issue: https://github.com/leonardssh/vscord/issues/209</p>
+
+<p>A special shoutouts to @leonardssh and @xhayper, I really love when secuirty reports are handle like this.
+@xhayper noticed that another extension which had the same function was also vulnerable so he came out with a fix for it also, tryly awesome work.</p>
+
+<p>The fix was pretty simple: https://github.com/leonardssh/vscord/commit/a1a1d51ae4415584ab2c6d6fe9a7ac5a0cdd85d8</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="nx">stripCredential</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">./helpers/stripCredential</span><span class="dl">"</span><span class="p">;</span>
+
+
+    <span class="kr">public</span> <span class="kd">get</span> <span class="nf">gitRemoteUrl</span><span class="p">():</span> <span class="nx">gitUrlParse</span><span class="p">.</span><span class="nx">GitUrl</span> <span class="o">|</span> <span class="kc">undefined</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">v</span> <span class="o">=</span> <span class="nf">stripCredential</span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">_remote</span><span class="p">?.</span><span class="nx">fetchUrl</span> <span class="o">??</span> <span class="k">this</span><span class="p">.</span><span class="nx">_remote</span><span class="p">?.</span><span class="nx">pushUrl</span> <span class="o">??</span> <span class="dl">""</span><span class="p">);</span>
+        <span class="k">this</span><span class="p">.</span><span class="nf">debug</span><span class="p">(</span><span class="s2">`gitRemoteUrl(): Url: </span><span class="p">${</span><span class="nx">v</span> <span class="o">??</span> <span class="dl">""</span><span class="p">}</span><span class="s2">`</span><span class="p">);</span>
+        <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">v</span><span class="p">)</span> <span class="k">return</span><span class="p">;</span>
+
+        <span class="k">return</span> <span class="nf">gitUrlParse</span><span class="p">(</span><span class="nx">v</span><span class="p">);</span>
+    <span class="p">}</span>
+</code></pre></div></div>
+
+<p>https://github.com/leonardssh/vscord/blob/a1a1d51ae4415584ab2c6d6fe9a7ac5a0cdd85d8/src/helpers/stripCredential.ts</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">import</span> <span class="p">{</span> <span class="nx">URL</span> <span class="p">}</span> <span class="k">from</span> <span class="dl">"</span><span class="s2">node:url</span><span class="dl">"</span><span class="p">;</span>
+
+<span class="k">export</span> <span class="k">default</span> <span class="nf">function </span><span class="p">(</span><span class="nx">uri</span><span class="p">:</span> <span class="nx">string</span><span class="p">):</span> <span class="nx">string</span> <span class="p">{</span>
+    <span class="k">try</span> <span class="p">{</span>
+        <span class="kd">const</span> <span class="nx">url</span> <span class="o">=</span> <span class="k">new</span> <span class="nc">URL</span><span class="p">(</span><span class="nx">uri</span><span class="p">);</span>
+        <span class="nx">url</span><span class="p">.</span><span class="nx">username</span> <span class="o">=</span> <span class="dl">""</span><span class="p">;</span>
+        <span class="nx">url</span><span class="p">.</span><span class="nx">password</span> <span class="o">=</span> <span class="dl">""</span><span class="p">;</span>
+        <span class="k">return</span> <span class="nx">url</span><span class="p">.</span><span class="nf">toString</span><span class="p">();</span>
+    <span class="p">}</span> <span class="k">catch </span><span class="p">(</span><span class="nx">ignored</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">return</span> <span class="nx">uri</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Now the credential part is removed from the url before it is passed to Discord.</p>
+
+<hr />
+
+<p>If you are interested in reproducing the bug, then just downgrade your extension it should be below 5.1.8</p>
+
+<p><strong>Steps to reproduce</strong></p>
+
+<ol>
+  <li>Make sure you aren’t signed in to your Github acc in Vscode (instead we will rely upon the Username/Password based authentication for github )</li>
+  <li>Create any private repository in your github acc</li>
+  <li>
+    <p>Then clone it in your pc in vscode window (as we are not authenticated a prompt like this will appear)
+<img src="https://user-images.githubusercontent.com/31372554/233614351-27c74855-ca99-4ec7-a20f-7cd7a82acb0c.png" alt="chrome_qxNwX7MrYQ" /></p>
+  </li>
+  <li>Fill in the username and your github personal token as your password</li>
+</ol>
+
+<p>https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token</p>
+
+<ol>
+  <li>Now start editing any file in that repo and check discord</li>
+  <li>Click on the View Repository button</li>
+  <li>Click on Yep to open the url in browser</li>
+  <li>From the Browser address bar , copy the url there you will notice that you have got your github token also.</li>
+</ol>
+
+<p>You can verify your token from here</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>curl -s -u "user:ghp_************" https://api.github.com/user
+</code></pre></div></div>
+
+  </div><a class="u-url" href="/2023/04/23/Discord-Rich-Presence-LeonardSSH.vscord.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col">
+        <p class="feed-subscribe">
+          <a href="http://localhost:4000/feed.xml">
+            <svg class="svg-icon orange">
+              <use xlink:href="/assets/minima-social-icons.svg#rss"></use>
+            </svg><span>Subscribe</span>
+          </a>
+        </p>
+        <ul class="contact-list">
+          <li class="p-name">GitHub User</li>
+          <li><a class="u-email" href="mailto:your-email@domain.com">your-email@domain.com</a></li>
+        </ul>
+      </div>
+      <div class="footer-col">
+        <p>Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description.
+</p>
+      </div>
+    </div>
+
+    <div class="social-links"><ul class="social-media-list"></ul>
+</div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
