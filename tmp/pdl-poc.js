@@ -1,4 +1,4 @@
-userId=0
+var userId=0
 
 await fetch("/dashboard/api/userinfo").then(r=>r.json()).then(r=>userId=r.userId)
 
