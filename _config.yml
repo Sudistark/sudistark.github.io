@@ -72,10 +72,3 @@ minima:
   #  - { platform: twitter,        user_url: "https://twitter.com/jekyllrb" }
   # - { platform: x,              user_url: "https://x.com/sudhanshur705" }
   #  - { platform: youtube,        user_url: "https://www.youtube.com/jekyll" }
-
-logo:
-  enabled: true
-  src: /assets/images/avatar.jpg
-  alt: "sudi's blog logo"
-  width: 100
-  height: 100
