@@ -24,6 +24,7 @@ theme: minima
 plugins:
   - jekyll-feed
   - jekyll-seo-tag
+  - jekyll-linkpreview
 
 # Theme-specific settings
 
@@ -69,7 +70,7 @@ minima:
   #  - { platform: stackoverflow,  user_url: "https://stackoverflow.com/users/1234567/jekyll" }
   #  - { platform: telegram,       user_url: "https://t.me/jekyll" }
   #  - { platform: twitter,        user_url: "https://twitter.com/jekyllrb" }
-  #  - { platform: x,              user_url: "https://x.com/jekyllrb" }
+  # - { platform: x,              user_url: "https://x.com/sudhanshur705" }
   #  - { platform: youtube,        user_url: "https://www.youtube.com/jekyll" }
 
 

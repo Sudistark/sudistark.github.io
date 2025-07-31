@@ -10,5 +10,13 @@
   {%- endif -%}
 
   {%- include custom-head.html -%}
+
+  <script src="//cdn.jsdelivr.net/npm/@microlink/vanilla@latest/umd/microlink.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function (event) {
+    microlink('.card-preview')
+  })
+</script>
   
 </head>

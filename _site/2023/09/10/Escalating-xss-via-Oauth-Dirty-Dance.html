@@ -20,8 +20,15 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"BlogPosting","author":{"@type":"Person","name":"GitHub User"},"dateModified":"2023-09-10T00:00:00+05:30","datePublished":"2023-09-10T00:00:00+05:30","description":"My friend @testingforbugs reached to out to me , he had a xss in login.redacted.com and wanted to escalate the xss bug impact, cookies were marked as httponly and the main functionalities of the application were on www.redacted.com so the escalation wasn’t going to be easy here.","headline":"Account hijack for anyone using Google sign-in with , due to response-type switch + leaking href to XSS on login.redacted.com","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2023/09/10/Escalating-xss-via-Oauth-Dirty-Dance.html"},"url":"http://localhost:4000/2023/09/10/Escalating-xss-via-Oauth-Dirty-Dance.html"}</script>
 <!-- End Jekyll SEO tag -->
-<link rel="stylesheet" href="/assets/css/style.css">
-  <link rel="stylesheet" href="/assets/css/custom-dark.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Your awesome title" />
+<link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Your awesome title" />
+<script src="//cdn.jsdelivr.net/npm/@microlink/vanilla@latest/umd/microlink.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function (event) {
+    microlink('.card-preview')
+  })
+</script>
+  
 </head>
 <body><header class="site-header">
 
