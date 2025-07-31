@@ -1,0 +1,30 @@
+:root {
+    --background-color: #1a1a1a;
+    --text-color: #e0e0e0;
+    --link-color: #7abaff;
+    --header-color: #ffffff;
+  }
+  
+  body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+  }
+  
+  a {
+    color: var(--link-color);
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--header-color);
+  }
+  
+  .site-header, .site-footer {
+    background-color: #111;
+    color: var(--text-color);
+    border: none;
+  }
+  
+  .site-nav a {
+    color: var(--link-color);
+  }
+  

