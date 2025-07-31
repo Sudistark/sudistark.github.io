@@ -1,7 +1,7 @@
-title: Your awesome title
+title: sudi's blog
 author:
-  name: GitHub User
-  email: your-email@domain.com
+  name: sudi
+  email: sudi[at]wearehackerone.com
 
 # The `>` after `description:` means to ignore line-breaks until next key.
 # If you want to omit the line-break after the end of text, use `>-` instead.
@@ -73,4 +73,9 @@ minima:
   # - { platform: x,              user_url: "https://x.com/sudhanshur705" }
   #  - { platform: youtube,        user_url: "https://www.youtube.com/jekyll" }
 
-
+logo:
+  enabled: true
+  src: /assets/images/avatar.jpg
+  alt: "sudi's blog logo"
+  width: 100
+  height: 100
