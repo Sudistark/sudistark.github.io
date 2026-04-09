@@ -1,0 +1,11 @@
+<div class="link-preview">
+  <a href="{{ url }}" target="_blank" rel="noopener">
+    <div class="link-preview-content">
+      <div class="link-preview-title">{{ title }}</div>
+      {% if description %}
+      <div class="link-preview-description">{{ description }}</div>
+      {% endif %}
+      <div class="link-preview-domain">{{ domain }}</div>
+    </div>
+  </a>
+</div>
