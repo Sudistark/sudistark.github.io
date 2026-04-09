@@ -61,58 +61,15 @@ I wanted to write about this bug for quite a long time because it’s one of my 
 
 <p>For example Gmail supports the advance markdown formatting and all through AMP</p>
 
-<div class="link-preview">
-  <a href="https://developers.google.com/workspace/gmail/ampemail" target="_blank" rel="noopener">
-    
-    <div class="link-preview-image">
-      <img src="https://www.gstatic.com/devrel-devsite/prod/v369eac9380f92e8fedc492e2689927bb3475d758266c381eee326d0b49a77481/developers/images/opengraph/white.png" alt="AMP for Gmail  |  Google for Developers" loading="lazy" />
-    </div>
-    
-    <div class="link-preview-content">
-      <div class="link-preview-title">AMP for Gmail  |  Google for Developers</div>
-      
-      <div class="link-preview-domain">developers.google.com</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://developers.google.com/workspace/gmail/ampemail" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">AMP for Email - Google Workspace</div><div class="link-preview-description">Use AMP for Email to create dynamic, interactive email experiences</div><div class="link-preview-domain">developers.google.com</div></div></a></div>
 
 <p>It has been targeted in the past and you can find some very cool writeups for these.
 This one from the legend <a href="https://x.com/SecurityMB">Michał Bentkowski</a>. The writeup is already very detailed involves Dom Clobbering to inject arbitrary scripts into the page.</p>
-<div class="link-preview">
-  <a href="https://web.archive.org/web/20250720221337/https://research.securitum.com/xss-in-amp4email-dom-clobbering/" target="_blank" rel="noopener">
-    
-    <div class="link-preview-image">
-      <img src="https://web.archive.org/web/20250720221337im_/https://research.securitum.com/wp-content/uploads/sites/2/2019/11/image-1.png" alt="XSS in GMail's AMP4Email via DOM Clobbering - research.securitum.com" loading="lazy" />
-    </div>
-    
-    <div class="link-preview-content">
-      <div class="link-preview-title">XSS in GMail's AMP4Email via DOM Clobbering - research.securitum.com</div>
-      
-      <div class="link-preview-description">This post is a write up of an XSS in AMP4Email (obviously already fixed) I reported via Google Vulnerability Reward Program in August 2019. The XSS is an example of a real-world exploitation of well-known browser issue called DOM Clobbering.</div>
-      
-      <div class="link-preview-domain">web.archive.org</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://web.archive.org/web/20250720221337/https://research.securitum.com/xss-in-amp4email-dom-clobbering/" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">XSS in AMP4Email - DOM Clobbering</div><div class="link-preview-description">DOM Clobbering attack on AMP for Email by Michał Bentkowski</div><div class="link-preview-domain">research.securitum.com</div></div></a></div>
 
 <p>Second one is this, which involves an HTML parsing quirk from <a href="https://x.com/agamimaulana">@agamimaulana</a>.</p>
 
-<div class="link-preview">
-  <a href="https://asdqw3.medium.com/xss-in-gmail-dynamic-email-amp-for-email-3872d6052a0d" target="_blank" rel="noopener">
-    
-    <div class="link-preview-image">
-      <img src="https://miro.medium.com/v2/resize:fit:617/1*Ye2Tm9CC5eUJfyS8KArAvw.png" alt="XSS in GMAIL Dynamic Email (AMP for Email)" loading="lazy" />
-    </div>
-    
-    <div class="link-preview-content">
-      <div class="link-preview-title">XSS in GMAIL Dynamic Email (AMP for Email)</div>
-      
-      <div class="link-preview-description">I found a XSS vulnerability on GMAIL that I reported to Google VRP on January 2023. This issue occurs due to improper HTML parsing in GMAIL…</div>
-      
-      <div class="link-preview-domain">asdqw3.medium.com</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://asdqw3.medium.com/xss-in-gmail-dynamic-email-amp-for-email-3872d6052a0d" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">XSS in Gmail Dynamic Email (AMP for Email)</div><div class="link-preview-description">HTML parsing quirk exploitation in Gmail's AMP implementation</div><div class="link-preview-domain">medium.com</div></div></a></div>
 
 <p>STYLE tags are very special the content inside of STYLE element is treated as RAW text in HTML namespace no html parsing is done in this context which you can see for the element with id 1. The only way to break the context for a STYLE element is through a closing STYLE element you can see the same example using the element with id 2.</p>
 
@@ -161,17 +118,7 @@ I mentioned about the reply option where our sanitized content is rendered witho
 
 <p>Luckily the used CKEditor version was old which had a known XSS issue, but there was no public poc available this meant I would need to reverse engineer it.</p>
 
-<div class="link-preview">
-  <a href="https://github.com/ckeditor/ckeditor4/security/advisories/GHSA-fq6h-4g8v-qqvm" target="_blank" rel="noopener">
-    <div class="link-preview-content">
-      <div class="link-preview-title">Cross-site scripting (XSS) vulnerability caused by incorrect CDATA detection</div>
-      
-      <div class="link-preview-description">GitHub is where people build software. More than 150 million people use GitHub to discover, fork, and contribute to over 420 million projects.</div>
-      
-      <div class="link-preview-domain">github.com</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://github.com/ckeditor/ckeditor4/security/advisories/GHSA-fq6h-4g8v-qqvm" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">CKEditor 4 - XSS via CDATA Content Detection</div><div class="link-preview-description">GHSA-fq6h-4g8v-qqvm - Malformed HTML bypassing Advanced Content Filtering</div><div class="link-preview-domain">github.com</div></div></a></div>
 
 <p>Currently the flow is like this</p>
 
@@ -192,22 +139,7 @@ Rendered in the page
 <p>Earlier I said DOMPurify is very safe you can trust blindly if you are using it with the default configs plus I said that Redacted Mail is using DOMPurify with some custom hooks.
 You might ask what these hooks are</p>
 
-<div class="link-preview">
-  <a href="https://github.com/cure53/DOMPurify" target="_blank" rel="noopener">
-    
-    <div class="link-preview-image">
-      <img src="https://opengraph.githubassets.com/ea3806a4ee6fc3fffbe565b2151d0203e07d824f5adb62e0cdbff8b5d89b2b16/cure53/DOMPurify" alt="GitHub - cure53/DOMPurify: DOMPurify - a DOM-only, super-fast, uber-tolerant XSS sanitizer for HTML, MathML and SVG. DOMPurify works with a secure default, but offers a lot of configurability and hooks. Demo:" loading="lazy" />
-    </div>
-    
-    <div class="link-preview-content">
-      <div class="link-preview-title">GitHub - cure53/DOMPurify: DOMPurify - a DOM-only, super-fast, uber-tolerant XSS sanitizer for HTML, MathML and SVG. DOMPurify works with a secure default, but offers a lot of configurability and hooks. Demo:</div>
-      
-      <div class="link-preview-description">DOMPurify - a DOM-only, super-fast, uber-tolerant XSS sanitizer for HTML, MathML and SVG. DOMPurify works with a secure default, but offers a lot of configurability and hooks. Demo: - cure53/DOMPurify</div>
-      
-      <div class="link-preview-domain">github.com</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://github.com/cure53/dompurify?tab=readme-ov-file#hooks" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">DOMPurify - Hooks</div><div class="link-preview-description">DOMPurify hooks allow custom modifications during the sanitization process</div><div class="link-preview-domain">github.com</div></div></a></div>
 
 <div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>beforeSanitizeElements
 uponSanitizeElement (No 's' - called for every element)
@@ -256,29 +188,9 @@ afterSanitizeShadowDOM
 
 <p>From now onwards I am going to talk a lot about DOMPurify internals and MXSS so if you aren’t familiar with the MXSS research or the past DOMPurify bypasses I would highly recommend you to have some solid coverage over those topics otherwise it will be hard to follow up and you won’t be able to understand much.</p>
 
-<div class="link-preview">
-  <a href="https://mizu.re/post/exploring-the-dompurify-library-bypasses-and-fixes" target="_blank" rel="noopener">
-    <div class="link-preview-content">
-      <div class="link-preview-title">Exploring the DOMPurify library: Bypasses and Fixes (1/2). Tags:Article - Article - Web - mXSS</div>
-      
-      <div class="link-preview-description">Exploring the DOMPurify library: Bypasses and Fixes (1/2)</div>
-      
-      <div class="link-preview-domain">mizu.re</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://mizu.re/post/exploring-the-dompurify-library-bypasses-and-fixes" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">Exploring the DOMPurify Library - Bypasses and Fixes</div><div class="link-preview-description">Deep dive into DOMPurify bypasses and how they were fixed</div><div class="link-preview-domain">mizu.re</div></div></a></div>
 
-<div class="link-preview">
-  <a href="https://mizu.re/post/exploring-the-dompurify-library-hunting-for-misconfigurations" target="_blank" rel="noopener">
-    <div class="link-preview-content">
-      <div class="link-preview-title">Exploring the DOMPurify library: Hunting for Misconfigurations (2/2). Tags:Article - Article - Web - mXSS</div>
-      
-      <div class="link-preview-description">Exploring the DOMPurify library: Hunting for Misconfigurations (2/2)</div>
-      
-      <div class="link-preview-domain">mizu.re</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://mizu.re/post/exploring-the-dompurify-library-hunting-for-misconfigurations" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">Exploring the DOMPurify Library - Hunting for Misconfigurations</div><div class="link-preview-description">Finding security issues in DOMPurify hook configurations</div><div class="link-preview-domain">mizu.re</div></div></a></div>
 
 <p>Shout out to <a href="https://x.com/kevin_mizu">Kévin Gervot</a>, I am super grateful to have had him by my side when I was learning about mxss just to reverse engineer the infamous DOMPurify bypasses which came in 2024. He is super talented at the same time very humble as well.</p>
 
@@ -430,17 +342,7 @@ So this fix single handedly ensures no more MXSS could be there.</p>
 
 <p>There was a challenge around very old version of DOMPurify from [@S1r1u5<em>](https://x.com/S1r1u5</em>). The only thing surprising about this challenge was DOMPurify was called 10 times.</p>
 
-<div class="link-preview">
-  <a href="https://x.com/S1r1u5_/status/1837431552676188491" target="_blank" rel="noopener">
-    <div class="link-preview-content">
-      <div class="link-preview-title">JavaScript is not available.</div>
-      
-      <div class="link-preview-description">We’ve detected that JavaScript is disabled in this browser. Please enable JavaScript or switch to a supported browser to continue using x.com. You can see a list of supported browsers in our Help Center.</div>
-      
-      <div class="link-preview-domain">x.com</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://x.com/S1r1u5_/status/1837431552676188491" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">@S1r1u5_ - DOMPurify Challenge</div><div class="link-preview-description">DOMPurify challenge where sanitize is called 10 times</div><div class="link-preview-domain">x.com</div></div></a></div>
 
 <p>My solution to this was very simple, I just needed to hide my payload and have it mutate after the 10th iteration only</p>
 
@@ -454,39 +356,9 @@ So this fix single handedly ensures no more MXSS could be there.</p>
 
 <p>The way he smuggled the broken pieces of the payload half inside the attribute value and half inside the style content is super clever plus the arrangement of the style tag creativity at its peak. The base idea around this bypass is related to the parsing quirk for <code class="language-plaintext highlighter-rouge">mglyph</code> element.</p>
 
-<div class="link-preview">
-  <a href="https://web.archive.org/web/20220903190106/https://research.securitum.com/mutation-xss-via-mathml-mutation-dompurify-2-0-17-bypass/" target="_blank" rel="noopener">
-    
-    <div class="link-preview-image">
-      <img src="https://web.archive.org/web/20220903190106im_/https://research.securitum.com/wp-content/uploads/sites/2/2020/10/image-1-1024x104.png" alt="Mutation XSS via namespace confusion - DOMPurify &lt; 2.0.17 bypass - research.securitum.com" loading="lazy" />
-    </div>
-    
-    <div class="link-preview-content">
-      <div class="link-preview-title">Mutation XSS via namespace confusion - DOMPurify &lt; 2.0.17 bypass - research.securitum.com</div>
-      
-      <div class="link-preview-description">In this blogpost I’ll explain my recent bypass in DOMPurify – the popular HTML sanitizer library. In a nutshell, DOMPurify’s job is to take an untrusted HTML snippet, supposedly coming from an end-user, and remove all elements and attributes that can lead to Cross-Site Scripting (XSS). This is the bypass: Believe me that there’s not ...</div>
-      
-      <div class="link-preview-domain">web.archive.org</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://web.archive.org/web/20220903190106/https://research.securitum.com/mutation-xss-via-mathml-mutation-dompurify-2-0-17-bypass/" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">Mutation XSS via MathML - DOMPurify 2.0.17 Bypass</div><div class="link-preview-description">Bypassing DOMPurify using MathML mutation and mglyph parsing quirk</div><div class="link-preview-domain">research.securitum.com</div></div></a></div>
 
-<div class="link-preview">
-  <a href="https://portswigger.net/research/bypassing-dompurify-again-with-mutation-xss" target="_blank" rel="noopener">
-    
-    <div class="link-preview-image">
-      <img src="https://portswigger.net/content/images/logos/portswigger-twittercardlogo.png" alt="Bypassing DOMPurify again with mutation XSS" loading="lazy" />
-    </div>
-    
-    <div class="link-preview-content">
-      <div class="link-preview-title">Bypassing DOMPurify again with mutation XSS</div>
-      
-      <div class="link-preview-description">After seeing Michał Bentkowski's DOMPurify bypass and the resulting patch, I was inspired to try and crack the patched version myself. Looking at his vector I saw he used style with math based tags to</div>
-      
-      <div class="link-preview-domain">portswigger.net</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://portswigger.net/research/bypassing-dompurify-again-with-mutation-xss" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">Bypassing DOMPurify Again with Mutation XSS</div><div class="link-preview-description">PortSwigger Research on mutation XSS bypasses in DOMPurify</div><div class="link-preview-domain">portswigger.net</div></div></a></div>
 
 <p>I came up with the following payload to bypass 4 iterations of DOMPurify</p>
 
@@ -506,17 +378,7 @@ So this fix single handedly ensures no more MXSS could be there.</p>
 
 <h1 id="reverse-engineering-the-ckeditor-n-day">Reverse Engineering the CKEditor N-Day</h1>
 
-<div class="link-preview">
-  <a href="https://github.com/ckeditor/ckeditor4/security/advisories/GHSA-fq6h-4g8v-qqvm" target="_blank" rel="noopener">
-    <div class="link-preview-content">
-      <div class="link-preview-title">Cross-site scripting (XSS) vulnerability caused by incorrect CDATA detection</div>
-      
-      <div class="link-preview-description">GitHub is where people build software. More than 150 million people use GitHub to discover, fork, and contribute to over 420 million projects.</div>
-      
-      <div class="link-preview-domain">github.com</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://github.com/ckeditor/ckeditor4/security/advisories/GHSA-fq6h-4g8v-qqvm" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">CKEditor 4 - XSS via CDATA Content Detection</div><div class="link-preview-description">GHSA-fq6h-4g8v-qqvm - Malformed HTML bypassing Advanced Content Filtering</div><div class="link-preview-domain">github.com</div></div></a></div>
 
 <p><em>A potential vulnerability has been discovered in CKEditor 4 HTML processing core module. The vulnerability allowed to inject malformed HTML content bypassing Advanced Content Filtering mechanism, which could result in executing JavaScript code. An attacker could abuse faulty CDATA content detection and use it to prepare an intentional attack on the editor. It affects all users using the CKEditor 4 at version &lt; 4.24.0-lts.</em></p>
 
@@ -533,22 +395,7 @@ So this fix single handedly ensures no more MXSS could be there.</p>
 
 <p>Ryotak has a nice writeup around CDATA parsing logics which allowed him to bypass DOMPurify</p>
 
-<div class="link-preview">
-  <a href="https://flatt.tech/research/posts/bypassing-dompurify-with-good-old-xml/" target="_blank" rel="noopener">
-    
-    <div class="link-preview-image">
-      <img src="https://flatt.tech/research/bypassing-dompurify-with-good-old-xml-thumbnail.png" alt="Bypassing DOMPurify with good old XML" loading="lazy" />
-    </div>
-    
-    <div class="link-preview-content">
-      <div class="link-preview-title">Bypassing DOMPurify with good old XML</div>
-      
-      <div class="link-preview-description">How I could bypass DOMPurify with XML</div>
-      
-      <div class="link-preview-domain">flatt.tech</div>
-    </div>
-  </a>
-</div>
+<div class="link-preview"><a href="https://flatt.tech/research/posts/bypassing-dompurify-with-good-old-xml/" target="_blank" rel="noopener"><div class="link-preview-content"><div class="link-preview-title">Bypassing DOMPurify with Good Old XML</div><div class="link-preview-description">Ryotak's research on CDATA parsing logic to bypass DOMPurify</div><div class="link-preview-domain">flatt.tech</div></div></a></div>
 
 <p>Directly testing it on a local setup was much easier than focusing too much on the source, as the advisory comments had some mentioning around STYLE I tried playing around embedding CDATA blocks inside of it. My focus was if I can hide the closing style tag inside of CDATA which will allow me to hide a payload that gets missed by the CKEditor sanitizer, but when parsed by the browser the hidden payload comes into action.</p>
 
