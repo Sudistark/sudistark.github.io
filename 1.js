@@ -1,1 +1,1 @@
-console.log("Shirley: Hello sudi on " + origin )
+console.dir("Shirley: Hello sudi on " + origin )
